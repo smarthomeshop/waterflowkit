@@ -135,6 +135,7 @@ sensor:
 
   #HDC1080 temp & hum sensor
   - platform: hdc1080
+    id: sensor_hdc1080
     temperature:
       id: sensor_temperature
       name: "Temperature"
@@ -151,6 +152,7 @@ sensor:
 
   #Waterflow sensor 1 temp
   - platform: ntc
+    id: flow1_water_temperature
     sensor: resistance_sensor
     calibration:
       b_constant: 3950
@@ -177,6 +179,7 @@ sensor:
 
   #Waterflow sensor 2 temp koud water
   - platform: ntc
+    id: flow2_water_temperature
     sensor: resistance_sensor2
     calibration:
       b_constant: 3950
