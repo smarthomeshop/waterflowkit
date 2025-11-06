@@ -2,12 +2,13 @@
 substitutions:
   device_name: waterflowkit
   friendly_name: WaterFlowKit
-  waterflowkit_software_version: "2024.01"
+  waterflowkit_software_version: "2025.11"
   
 #Esphome start
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
   project:
     name: "smarthomeshop.waterflowkit"
     version: ${waterflowkit_software_version}
