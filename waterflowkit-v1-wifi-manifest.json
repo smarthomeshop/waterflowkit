@@ -1,0 +1,21 @@
+{
+  "name": "WaterFlowKit V1 WiFi",
+  "version": "1.1",
+  "home_assistant_domain": "esphome",
+  "new_install_skip_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "ota": {
+        "path": "waterflowkit-v1-wifi/waterflowkit-esp32.ota.bin",
+        "md5": "a71d97b0dcd5a86c480336f2edf36185"
+      },
+      "parts": [
+        {
+          "path": "waterflowkit-v1-wifi/waterflowkit-esp32.factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
