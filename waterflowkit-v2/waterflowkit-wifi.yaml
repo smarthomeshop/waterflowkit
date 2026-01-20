@@ -1,0 +1,13 @@
+# WaterFlowKit V2 WiFi Configuration
+# Main entry point for WiFi firmware
+# ESP32-C6 with built-in WiFi
+
+substitutions:
+  default_network: "WiFi"
+
+packages:
+  base: !include base.yaml
+  wifi: !include wifi.yaml
+
+dashboard_import:
+  package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-wifi.yaml@main

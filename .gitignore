@@ -1,2 +1,17 @@
 y
 y.pub
+CLOUD-INTEGRATION-GUIDE.md
+.gitignore
+ESPHOME-PROJECT-GUIDE.md
+
+# Temporary: Cloud files (not public yet)
+waterflowkit-v1/cloud.yaml
+waterflowkit-v1/waterflowkit-wifi-cloud.yaml
+waterflowkit-v2/cloud.yaml
+waterflowkit-v2/waterflowkit-wifi-cloud.yaml
+waterflowkit-v2/waterflowkit-ethernet-cloud.yaml
+
+# Temporary: Test files
+waterflowkit-v1/waterflowkit-wifi-test-all-in-one.yaml
+waterflowkit-v2/waterflowkit-ethernet-test.yaml
+waterflowkit-v2/waterflowkit-wifi-test.yaml

@@ -1,0 +1,704 @@
+# WaterFlowKit V2 - Base Configuration
+# Core functionality shared between all firmware variants
+# V2 has WiFi and Ethernet support - ESP32-C6 based
+
+substitutions:
+  # Product identification
+  device_name: waterflowkit
+  friendly_name: WaterFlowKit
+  software_version: "2.0.0"
+  hardware_version: "V2"
+  
+  # OTA manifest URLs (for firmware selector)
+  wifi_manifest_url: "https://smarthomeshop.github.io/waterflowkit/waterflowkit-v2-wifi-manifest.json"
+  ethernet_manifest_url: "https://smarthomeshop.github.io/waterflowkit/waterflowkit-v2-ethernet-manifest.json"
+  wifi_cloud_manifest_url: "https://smarthomeshop.github.io/waterflowkit/waterflowkit-v2-wifi-cloud-manifest.json"
+  ethernet_cloud_manifest_url: "https://smarthomeshop.github.io/waterflowkit/waterflowkit-v2-ethernet-cloud-manifest.json"
+  
+  # Default values (can be overridden)
+  default_network: "WiFi"
+  cloud_enabled: "false"
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  name_add_mac_suffix: true
+  project:
+    name: "smarthomeshop.waterflowkit"
+    version: ${software_version}
+  on_boot:
+    - priority: 610
+      then:
+        - lambda: |-
+            std::string option = id(firmware_selector).current_option();
+            if (option == "Ethernet") {
+              ESP_LOGI("main", "OTA updates set to use Ethernet firmware");
+              id(firmware_update).set_source_url("${ethernet_manifest_url}");
+            } else if (option == "WiFi Cloud") {
+              ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
+              id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
+            } else if (option == "Ethernet Cloud") {
+              ESP_LOGI("main", "OTA updates set to use Ethernet Cloud firmware");
+              id(firmware_update).set_source_url("${ethernet_cloud_manifest_url}");
+            } else {
+              ESP_LOGI("main", "OTA updates set to use WiFi firmware");
+              id(firmware_update).set_source_url("${wifi_manifest_url}");
+            }
+        - component.update: firmware_update
+
+esp32:
+  board: esp32-c6-devkitc-1
+  variant: esp32c6
+  framework:
+    type: esp-idf
+    version: "5.3.1"
+    platform_version: "6.9.0"
+
+# === Core Components ===
+logger:
+  baud_rate: 115200
+  hardware_uart: UART0  # Via CP2102 USB-UART bridge (GPIO16 TX, GPIO17 RX)
+
+api:
+
+ota:
+  - platform: esphome
+    id: ota_esphome
+  - platform: http_request
+    id: ota_http
+
+http_request:
+  useragent: waterflowkit-esphome
+  verify_ssl: false
+  timeout: 10s
+
+web_server:
+  port: 80
+
+# === Debug Component ===
+debug:
+  update_interval: 15min
+
+# === Firmware Update Component ===
+update:
+  - platform: http_request
+    name: "${friendly_name} Firmware"
+    id: firmware_update
+    source: ${wifi_manifest_url}
+
+# === Firmware Selector ===
+select:
+  - platform: template
+    id: firmware_selector
+    name: "${friendly_name} Firmware Type"
+    icon: "mdi:network"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "WiFi"
+      - "Ethernet"
+      - "WiFi Cloud"
+      - "Ethernet Cloud"
+    initial_option: ${default_network}
+    on_value:
+      then:
+        - lambda: |-
+            std::string option = id(firmware_selector).current_option();
+            if (option == "Ethernet") {
+              ESP_LOGI("main", "OTA updates set to use Ethernet firmware");
+              id(firmware_update).set_source_url("${ethernet_manifest_url}");
+            } else if (option == "WiFi Cloud") {
+              ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
+              id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
+            } else if (option == "Ethernet Cloud") {
+              ESP_LOGI("main", "OTA updates set to use Ethernet Cloud firmware");
+              id(firmware_update).set_source_url("${ethernet_cloud_manifest_url}");
+            } else {
+              ESP_LOGI("main", "OTA updates set to use WiFi firmware");
+              id(firmware_update).set_source_url("${wifi_manifest_url}");
+            }
+        - component.update: firmware_update
+
+  # Flow1 Sensor Type Selector
+  - platform: template
+    id: flow1_sensor_type
+    name: "${friendly_name} Flow1 Sensor Type"
+    icon: "mdi:water-pump"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "YF-B1 / YF-B7"
+      - "YF-B5 / YF-B6"
+      - "YF-B10"
+      - "YF-DN40-S"
+      - "YF-DN50-S"
+    initial_option: "YF-B1 / YF-B7"
+    on_value:
+      then:
+        - lambda: |-
+            std::string option = id(flow1_sensor_type).current_option();
+            if (option == "YF-B1 / YF-B7") {
+              id(flow1_calibration_factor) = 0.001515;  // 1/660
+            } else if (option == "YF-B5 / YF-B6") {
+              id(flow1_calibration_factor) = 0.002525;  // 1/396
+            } else if (option == "YF-B10") {
+              id(flow1_calibration_factor) = 0.002222;  // 1/450
+            } else if (option == "YF-DN40-S") {
+              id(flow1_calibration_factor) = 0.037037;  // 1/27
+            } else if (option == "YF-DN50-S") {
+              id(flow1_calibration_factor) = 0.083333;  // 1/12
+            }
+            ESP_LOGI("main", "Flow1 sensor type set to %s, calibration factor: %.6f", option.c_str(), id(flow1_calibration_factor));
+
+  # Flow2 Sensor Type Selector
+  - platform: template
+    id: flow2_sensor_type
+    name: "${friendly_name} Flow2 Sensor Type"
+    icon: "mdi:water-pump"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "YF-B1 / YF-B7"
+      - "YF-B5 / YF-B6"
+      - "YF-B10"
+      - "YF-DN40-S"
+      - "YF-DN50-S"
+    initial_option: "YF-B1 / YF-B7"
+    on_value:
+      then:
+        - lambda: |-
+            std::string option = id(flow2_sensor_type).current_option();
+            if (option == "YF-B1 / YF-B7") {
+              id(flow2_calibration_factor) = 0.001515;  // 1/660
+            } else if (option == "YF-B5 / YF-B6") {
+              id(flow2_calibration_factor) = 0.002525;  // 1/396
+            } else if (option == "YF-B10") {
+              id(flow2_calibration_factor) = 0.002222;  // 1/450
+            } else if (option == "YF-DN40-S") {
+              id(flow2_calibration_factor) = 0.037037;  // 1/27
+            } else if (option == "YF-DN50-S") {
+              id(flow2_calibration_factor) = 0.083333;  // 1/12
+            }
+            ESP_LOGI("main", "Flow2 sensor type set to %s, calibration factor: %.6f", option.c_str(), id(flow2_calibration_factor));
+
+  # Flow3 Sensor Type Selector
+  - platform: template
+    id: flow3_sensor_type
+    name: "${friendly_name} Flow3 Sensor Type"
+    icon: "mdi:water-pump"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "YF-B1 / YF-B7"
+      - "YF-B5 / YF-B6"
+      - "YF-B10"
+      - "YF-DN40-S"
+      - "YF-DN50-S"
+    initial_option: "YF-B1 / YF-B7"
+    on_value:
+      then:
+        - lambda: |-
+            std::string option = id(flow3_sensor_type).current_option();
+            if (option == "YF-B1 / YF-B7") {
+              id(flow3_calibration_factor) = 0.001515;  // 1/660
+            } else if (option == "YF-B5 / YF-B6") {
+              id(flow3_calibration_factor) = 0.002525;  // 1/396
+            } else if (option == "YF-B10") {
+              id(flow3_calibration_factor) = 0.002222;  // 1/450
+            } else if (option == "YF-DN40-S") {
+              id(flow3_calibration_factor) = 0.037037;  // 1/27
+            } else if (option == "YF-DN50-S") {
+              id(flow3_calibration_factor) = 0.083333;  // 1/12
+            }
+            ESP_LOGI("main", "Flow3 sensor type set to %s, calibration factor: %.6f", option.c_str(), id(flow3_calibration_factor));
+
+  # Flow4 Sensor Type Selector
+  - platform: template
+    id: flow4_sensor_type
+    name: "${friendly_name} Flow4 Sensor Type"
+    icon: "mdi:water-pump"
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    options:
+      - "YF-B1 / YF-B7"
+      - "YF-B5 / YF-B6"
+      - "YF-B10"
+      - "YF-DN40-S"
+      - "YF-DN50-S"
+    initial_option: "YF-B1 / YF-B7"
+    on_value:
+      then:
+        - lambda: |-
+            std::string option = id(flow4_sensor_type).current_option();
+            if (option == "YF-B1 / YF-B7") {
+              id(flow4_calibration_factor) = 0.001515;  // 1/660
+            } else if (option == "YF-B5 / YF-B6") {
+              id(flow4_calibration_factor) = 0.002525;  // 1/396
+            } else if (option == "YF-B10") {
+              id(flow4_calibration_factor) = 0.002222;  // 1/450
+            } else if (option == "YF-DN40-S") {
+              id(flow4_calibration_factor) = 0.037037;  // 1/27
+            } else if (option == "YF-DN50-S") {
+              id(flow4_calibration_factor) = 0.083333;  // 1/12
+            }
+            ESP_LOGI("main", "Flow4 sensor type set to %s, calibration factor: %.6f", option.c_str(), id(flow4_calibration_factor));
+
+# === Calibration Fine-tuning ===
+number:
+  - platform: template
+    id: flow1_calibration_adjust
+    name: "${friendly_name} Flow1 Calibration %"
+    icon: "mdi:tune"
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 50
+    max_value: 150
+    step: 1
+    initial_value: 100
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            id(flow1_calibration_offset) = x / 100.0;
+            ESP_LOGI("main", "Flow1 calibration adjustment set to %.0f%% (factor: %.3f)", x, id(flow1_calibration_offset));
+
+  - platform: template
+    id: flow2_calibration_adjust
+    name: "${friendly_name} Flow2 Calibration %"
+    icon: "mdi:tune"
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 50
+    max_value: 150
+    step: 1
+    initial_value: 100
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            id(flow2_calibration_offset) = x / 100.0;
+            ESP_LOGI("main", "Flow2 calibration adjustment set to %.0f%% (factor: %.3f)", x, id(flow2_calibration_offset));
+
+  - platform: template
+    id: flow3_calibration_adjust
+    name: "${friendly_name} Flow3 Calibration %"
+    icon: "mdi:tune"
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 50
+    max_value: 150
+    step: 1
+    initial_value: 100
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            id(flow3_calibration_offset) = x / 100.0;
+            ESP_LOGI("main", "Flow3 calibration adjustment set to %.0f%% (factor: %.3f)", x, id(flow3_calibration_offset));
+
+  - platform: template
+    id: flow4_calibration_adjust
+    name: "${friendly_name} Flow4 Calibration %"
+    icon: "mdi:tune"
+    entity_category: config
+    unit_of_measurement: "%"
+    min_value: 50
+    max_value: 150
+    step: 1
+    initial_value: 100
+    optimistic: true
+    restore_value: true
+    on_value:
+      then:
+        - lambda: |-
+            id(flow4_calibration_offset) = x / 100.0;
+            ESP_LOGI("main", "Flow4 calibration adjustment set to %.0f%% (factor: %.3f)", x, id(flow4_calibration_offset));
+
+# === Calibration Globals ===
+globals:
+  - id: flow1_calibration_factor
+    type: float
+    restore_value: true
+    initial_value: "0.001515"
+
+  - id: flow2_calibration_factor
+    type: float
+    restore_value: true
+    initial_value: "0.001515"
+
+  - id: flow3_calibration_factor
+    type: float
+    restore_value: true
+    initial_value: "0.001515"
+
+  - id: flow4_calibration_factor
+    type: float
+    restore_value: true
+    initial_value: "0.001515"
+
+  - id: flow1_calibration_offset
+    type: float
+    restore_value: true
+    initial_value: "1.0"
+
+  - id: flow2_calibration_offset
+    type: float
+    restore_value: true
+    initial_value: "1.0"
+
+  - id: flow3_calibration_offset
+    type: float
+    restore_value: true
+    initial_value: "1.0"
+
+  - id: flow4_calibration_offset
+    type: float
+    restore_value: true
+    initial_value: "1.0"
+
+# === Device Controls ===
+switch:
+  - platform: restart
+    id: switch_restart
+    name: "${friendly_name} Restart"
+
+button:
+  - platform: factory_reset
+    name: "${friendly_name} Factory Reset"
+    entity_category: config
+    disabled_by_default: true
+
+# === LED Outputs ===
+output:
+  - platform: ledc
+    pin: GPIO23
+    id: output_led_green
+  - platform: ledc
+    pin: GPIO15
+    id: output_led_blue
+
+light:
+  - platform: monochromatic
+    id: light_led_green
+    output: output_led_green
+  - platform: monochromatic
+    id: light_led_blue
+    output: output_led_blue
+
+# === Status LED ===
+status_led:
+  pin:
+    number: GPIO22
+    inverted: false
+
+# === I2C Bus ===
+# Note: scan: false is required for ESP32-C6 stability (GitHub issue #7128)
+i2c:
+  sda: GPIO3
+  scl: GPIO2
+  scan: false
+  id: bus_a
+
+# === Time ===
+time:
+  - platform: homeassistant
+    id: time_homeassistant
+    on_time_sync:
+      - component.update: sensor_uptime_timestamp
+
+# === Sensors ===
+sensor:
+  # Uptime (internal)
+  - platform: uptime
+    id: sensor_uptime
+
+  # Uptime Timestamp (sends once)
+  - platform: template
+    id: sensor_uptime_timestamp
+    name: "${friendly_name} Uptime"
+    device_class: "timestamp"
+    accuracy_decimals: 0
+    update_interval: never
+    lambda: |-
+      static float timestamp = (
+        id(time_homeassistant).utcnow().timestamp - id(sensor_uptime).state
+      );
+      return timestamp;
+
+  # HDC1080 Temperature & Humidity Sensor
+  - platform: hdc1080
+    id: sensor_hdc1080
+    temperature:
+      id: sensor_temperature
+      name: "Temperature"
+      filters:
+        offset: -4.5
+    humidity:
+      id: sensor_humidity
+      name: "Humidity"
+      filters:
+        offset: 12
+    update_interval: 60s
+
+  # =========================================================
+  # WATER FLOW SENSOR 1 (DATA1: GPIO7, NTC1: GPIO5)
+  # =========================================================
+  # Temperature
+  - platform: ntc
+    id: flow1_water_temperature
+    sensor: resistance_sensor1
+    calibration:
+      b_constant: 3950
+      reference_temperature: 25°C
+      reference_resistance: 50kOhm
+    name: Flow1 Water Temperature
+    accuracy_decimals: 1
+
+  - platform: resistance
+    id: resistance_sensor1
+    sensor: source_sensor1
+    configuration: UPSTREAM
+    resistor: 49.9kOhm
+    internal: true
+    name: Flow1 Temperature resistance
+
+  - platform: adc
+    id: source_sensor1
+    pin: GPIO5
+    update_interval: 5s
+    name: Flow1 Temperature voltage
+    attenuation: 11db
+    internal: true
+
+  # Flow Count
+  - platform: pulse_counter
+    pin:
+      number: GPIO7
+      mode:
+        input: true
+        pullup: true
+    unit_of_measurement: 'L/min'
+    id: water_usage1
+    name: "Flow1 Current water usage"
+    icon: "mdi:water-pump"
+    update_interval: 5s
+    filters:
+      - lambda: |-
+          return x * id(flow1_calibration_factor) * id(flow1_calibration_offset) / 60.0;
+    total:
+      id: sensor_pulse_meter_total1
+      name: "Flow1 Total Consumption"
+      icon: "mdi:cube-outline"
+      unit_of_measurement: "L"
+      state_class: total_increasing
+      device_class: water
+      accuracy_decimals: 3
+      filters:
+        - lambda: |-
+            return x * id(flow1_calibration_factor) * id(flow1_calibration_offset);
+
+  # =========================================================
+  # WATER FLOW SENSOR 2 (DATA2: GPIO1, NTC2: GPIO4)
+  # =========================================================
+  # Temperature
+  - platform: ntc
+    id: flow2_water_temperature
+    sensor: resistance_sensor2
+    calibration:
+      b_constant: 3950
+      reference_temperature: 25°C
+      reference_resistance: 50kOhm
+    name: Flow2 Water Temperature
+    accuracy_decimals: 1
+
+  - platform: resistance
+    id: resistance_sensor2
+    sensor: source_sensor2
+    configuration: UPSTREAM
+    resistor: 49.9kOhm
+    internal: true
+    name: Flow2 Temperature resistance
+
+  - platform: adc
+    id: source_sensor2
+    pin: GPIO4
+    update_interval: 5s
+    name: Flow2 Temperature voltage
+    attenuation: 11db
+    internal: true
+
+  # Flow Count
+  - platform: pulse_counter
+    pin:
+      number: GPIO1
+      mode:
+        input: true
+        pullup: true
+    unit_of_measurement: 'L/min'
+    id: water_usage2
+    name: "Flow2 Current water usage"
+    icon: "mdi:water-pump"
+    update_interval: 5s
+    filters:
+      - lambda: |-
+          return x * id(flow2_calibration_factor) * id(flow2_calibration_offset) / 60.0;
+    total:
+      id: sensor_pulse_meter_total2
+      name: "Flow2 Total Consumption"
+      icon: "mdi:cube-outline"
+      unit_of_measurement: "L"
+      state_class: total_increasing
+      device_class: water
+      accuracy_decimals: 3
+      filters:
+        - lambda: |-
+            return x * id(flow2_calibration_factor) * id(flow2_calibration_offset);
+
+  # =========================================================
+  # WATER FLOW SENSOR 3 (DATA3: GPIO10, NTC3: GPIO6)
+  # =========================================================
+  # Temperature
+  - platform: ntc
+    id: flow3_water_temperature
+    sensor: resistance_sensor3
+    calibration:
+      b_constant: 3950
+      reference_temperature: 25°C
+      reference_resistance: 50kOhm
+    name: Flow3 Water Temperature
+    accuracy_decimals: 1
+
+  - platform: resistance
+    id: resistance_sensor3
+    sensor: source_sensor3
+    configuration: UPSTREAM
+    resistor: 49.9kOhm
+    internal: true
+    name: Flow3 Temperature resistance
+
+  - platform: adc
+    id: source_sensor3
+    pin: GPIO6
+    update_interval: 5s
+    name: Flow3 Temperature voltage
+    attenuation: 11db
+    internal: true
+
+  # Flow Count
+  - platform: pulse_counter
+    pin:
+      number: GPIO10
+      mode:
+        input: true
+        pullup: true
+    unit_of_measurement: 'L/min'
+    id: water_usage3
+    name: "Flow3 Current water usage"
+    icon: "mdi:water-pump"
+    update_interval: 5s
+    filters:
+      - lambda: |-
+          return x * id(flow3_calibration_factor) * id(flow3_calibration_offset) / 60.0;
+    total:
+      id: sensor_pulse_meter_total3
+      name: "Flow3 Total Consumption"
+      icon: "mdi:cube-outline"
+      unit_of_measurement: "L"
+      state_class: total_increasing
+      device_class: water
+      accuracy_decimals: 3
+      filters:
+        - lambda: |-
+            return x * id(flow3_calibration_factor) * id(flow3_calibration_offset);
+
+  # =========================================================
+  # WATER FLOW SENSOR 4 (DATA4: GPIO11, NTC4: GPIO0)
+  # =========================================================
+  # Temperature
+  - platform: ntc
+    id: flow4_water_temperature
+    sensor: resistance_sensor4
+    calibration:
+      b_constant: 3950
+      reference_temperature: 25°C
+      reference_resistance: 50kOhm
+    name: Flow4 Water Temperature
+    accuracy_decimals: 1
+
+  - platform: resistance
+    id: resistance_sensor4
+    sensor: source_sensor4
+    configuration: UPSTREAM
+    resistor: 49.9kOhm
+    internal: true
+    name: Flow4 Temperature resistance
+
+  - platform: adc
+    id: source_sensor4
+    pin: GPIO0
+    update_interval: 5s
+    name: Flow4 Temperature voltage
+    attenuation: 11db
+    internal: true
+
+  # Flow Count
+  - platform: pulse_counter
+    pin:
+      number: GPIO11
+      mode:
+        input: true
+        pullup: true
+    unit_of_measurement: 'L/min'
+    id: water_usage4
+    name: "Flow4 Current water usage"
+    icon: "mdi:water-pump"
+    update_interval: 5s
+    filters:
+      - lambda: |-
+          return x * id(flow4_calibration_factor) * id(flow4_calibration_offset) / 60.0;
+    total:
+      id: sensor_pulse_meter_total4
+      name: "Flow4 Total Consumption"
+      icon: "mdi:cube-outline"
+      unit_of_measurement: "L"
+      state_class: total_increasing
+      device_class: water
+      accuracy_decimals: 3
+      filters:
+        - lambda: |-
+            return x * id(flow4_calibration_factor) * id(flow4_calibration_offset);
+
+# === Text Sensors ===
+text_sensor:
+  - platform: version
+    id: text_sensor_version
+    name: "${friendly_name} ESPHome Version"
+
+  - platform: debug
+    device:
+      name: "${friendly_name} Device Info"
+      entity_category: diagnostic
+    reset_reason:
+      name: "${friendly_name} Reset Reason"
+      icon: mdi:anchor
+      entity_category: diagnostic
+    
+  - platform: template
+    id: text_sensor_waterflowkit_version
+    name: "${friendly_name} Software Version"
+    update_interval: 5h
+    lambda: |-
+      return {"${software_version}"};
+      
+  - platform: template
+    name: "${friendly_name} Hardware Version"
+    lambda: 'return {"${hardware_version}"};'
+    update_interval: 5h

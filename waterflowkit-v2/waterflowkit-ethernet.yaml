@@ -1,0 +1,13 @@
+# WaterFlowKit V2 Ethernet Configuration
+# Main entry point for Ethernet firmware
+# ESP32-C6 with W5500 SPI Ethernet
+
+substitutions:
+  default_network: "Ethernet"
+
+packages:
+  base: !include base.yaml
+  eth: !include eth.yaml
+
+dashboard_import:
+  package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-ethernet.yaml@main

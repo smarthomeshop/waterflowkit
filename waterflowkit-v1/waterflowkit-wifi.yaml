@@ -1,0 +1,12 @@
+# WaterFlowKit V1 WiFi Configuration
+# Main entry point for WiFi firmware
+
+substitutions:
+  default_network: "WiFi"
+
+packages:
+  base: !include base.yaml
+  wifi: !include wifi.yaml
+
+dashboard_import:
+  package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v1/waterflowkit-wifi.yaml@main

@@ -1,0 +1,83 @@
+# WaterFlowKit V2 - WiFi Network Configuration
+# ESP32-C6 with esp-idf framework
+
+wifi:
+  # No WiFi credentials - device starts in AP mode for initial setup
+  # Users can configure WiFi via:
+  # - Captive Portal (connect to hotspot)
+  # - Improv BLE (via Bluetooth)
+  # - Improv Serial (via USB)
+  # - ESPHome dashboard (after adoption)
+  
+  ap:
+    ssid: ${device_name}
+    password: ${device_name}
+
+captive_portal:
+
+# Improv BLE (for WiFi provisioning via Bluetooth)
+# ESP32-C6 supports BLE 5.3 with ESP-IDF 5.3+
+esp32_improv:
+  authorizer: none
+
+# Improv Serial (for WiFi provisioning via USB)
+improv_serial:
+  next_url: "https://app.smarthomeshop.io/setup/welcome?device={{device_name}}&ip={{ip_address}}&cloud=${cloud_enabled}&hw=${hardware_version}"
+
+# BLE disable switch - saves RAM after WiFi is connected
+switch:
+  - platform: template
+    name: "${friendly_name} Disable BLE after boot"
+    id: ble_disable_after_boot
+    icon: mdi:bluetooth-off
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+# Disable BLE after WiFi connection to save RAM
+esphome:
+  on_boot:
+    - priority: 550
+      then:
+        - wait_until:
+            condition:
+              wifi.connected:
+            timeout: 120s
+        - if:
+            condition:
+              and:
+                - wifi.connected:
+                - switch.is_on: ble_disable_after_boot
+            then:
+              - logger.log: "WiFi connected, disabling BLE to save RAM"
+              - delay: 5s
+              - ble.disable:
+
+sensor:
+  # WiFi signal strength
+  - platform: wifi_signal
+    name: "${friendly_name} WiFi Signal"
+    update_interval: 300s
+    id: sensor_wifi_signal
+
+text_sensor:
+  # WiFi info
+  - platform: wifi_info
+    ip_address:
+      id: wifi_ip_address
+      name: "${friendly_name} IP Address"
+      icon: "mdi:network-outline"
+    ssid:
+      id: wifi_ssid
+      name: "${friendly_name} Connected SSID"
+    bssid:
+      name: "${friendly_name} Connected BSSID"
+    mac_address:
+      id: wifi_mac_address
+      name: "${friendly_name} MAC Address"
+      entity_category: diagnostic
+
+  # Dummy sensor for cloud.yaml compatibility (ethernet variant uses this ID)
+  - platform: template
+    id: ethernet_ip_address
+    internal: true
