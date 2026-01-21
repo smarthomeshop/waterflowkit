@@ -6,4 +6,4 @@ packages:
   wifi: !include waterflowkit-v1/wifi.yaml
 
 dashboard_import:
-  package_import_url: github://smarthomeshop/waterflowkit/waterflowkit.yaml@main
+  package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v1/waterflowkit-wifi.yaml@main
