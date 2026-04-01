@@ -2,7 +2,7 @@
   "chipFamily": "ESP32",
   "ota": {
     "path": "waterflowkit-esp32.ota.bin",
-    "md5": "dc8d22b5b810de0e2e3f9150eccea3cf"
+    "md5": "1cac8da9e67fc534cda4b9e60e5b077d"
   },
   "parts": [
     {
