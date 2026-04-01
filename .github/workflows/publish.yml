@@ -21,8 +21,6 @@ on:
       - ".github/workflows/**"
       - "waterflowkit-v1/**"
       - "waterflowkit-v2/**"
-    tags:
-      - "v*"
 
 permissions:
   contents: write
@@ -129,19 +127,21 @@ jobs:
               return
             fi
 
-            if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
-              new_version="${GITHUB_REF_NAME#v}"
+            if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              echo "${output_name}=${current_version}" >> "$GITHUB_OUTPUT"
+              echo "Tag build - keeping version: $current_version"
+              return
+            fi
+
+            if [[ "$current_version" =~ ^([0-9]+)\.([0-9]+)(.*)$ ]]; then
+              major="${BASH_REMATCH[1]}"
+              minor="${BASH_REMATCH[2]}"
+              suffix="${BASH_REMATCH[3]}"
+              new_minor=$((minor + 1))
+              new_version="${major}.${new_minor}${suffix}"
             else
-              if [[ "$current_version" =~ ^([0-9]+)\.([0-9]+)(.*)$ ]]; then
-                major="${BASH_REMATCH[1]}"
-                minor="${BASH_REMATCH[2]}"
-                suffix="${BASH_REMATCH[3]}"
-                new_minor=$((minor + 1))
-                new_version="${major}.${new_minor}${suffix}"
-              else
-                shortsha=$(echo "${GITHUB_SHA}" | cut -c1-7)
-                new_version="dev-${shortsha}"
-              fi
+              shortsha=$(echo "${GITHUB_SHA}" | cut -c1-7)
+              new_version="dev-${shortsha}"
             fi
 
             echo "${output_name}=${new_version}" >> "$GITHUB_OUTPUT"
@@ -162,11 +162,24 @@ jobs:
             echo "v2_version=$v2_current" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit version updates
+      - name: Commit version updates and create tags
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
+
+          create_tag() {
+            local tag_name=$1
+
+            if git rev-parse "$tag_name" >/dev/null 2>&1; then
+              echo "Tag $tag_name already exists, skipping"
+              return
+            fi
+
+            echo "Creating tag: $tag_name"
+            git tag -a "$tag_name" -m "Release $tag_name"
+            git push origin "$tag_name"
+          }
 
           changes_made=false
 
@@ -192,6 +205,14 @@ jobs:
 
             git commit -m "$msg" || exit 0
             git push || echo "Nothing to push"
+
+            if [[ "${{ steps.changes.outputs.v1 }}" == "true" && ! "${{ steps.versions.outputs.v1_version }}" =~ ^dev- ]]; then
+              create_tag "waterflowkit-v1-${{ steps.versions.outputs.v1_version }}"
+            fi
+
+            if [[ "${{ steps.changes.outputs.v2 }}" == "true" && ! "${{ steps.versions.outputs.v2_version }}" =~ ^dev- ]]; then
+              create_tag "waterflowkit-v2-${{ steps.versions.outputs.v2_version }}"
+            fi
           fi
 
   build-v1-wifi:
@@ -421,3 +442,41 @@ jobs:
           clean: false
           force: false
           attempt-limit: 6
+
+  create-releases:
+    name: Create GitHub releases
+    needs: [detect-changes]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Create releases for changed hardware versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          create_release() {
+            local tag_name=$1
+            local title=$2
+
+            if gh release view "$tag_name" >/dev/null 2>&1; then
+              echo "Release $tag_name already exists, skipping"
+              return
+            fi
+
+            gh release create "$tag_name" \
+              --verify-tag \
+              --title "$title" \
+              --notes "Customer-facing firmware notes live in CHANGELOG.md.
+
+Changelog: https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md"
+          }
+
+          if [[ "${{ needs.detect-changes.outputs.v1_changed }}" == "true" && ! "${{ needs.detect-changes.outputs.v1_version }}" =~ ^dev- ]]; then
+            create_release "waterflowkit-v1-${{ needs.detect-changes.outputs.v1_version }}" "WaterFlowKit V1 ${{ needs.detect-changes.outputs.v1_version }}"
+          fi
+
+          if [[ "${{ needs.detect-changes.outputs.v2_changed }}" == "true" && ! "${{ needs.detect-changes.outputs.v2_version }}" =~ ^dev- ]]; then
+            create_release "waterflowkit-v2-${{ needs.detect-changes.outputs.v2_version }}" "WaterFlowKit V2 ${{ needs.detect-changes.outputs.v2_version }}"
+          fi

@@ -66,6 +66,11 @@ The WaterFlowKit supports multiple flow sensor types with automatic calibration:
 
 Please check for full documentation our quick start guide: https://smarthomeshop.io/quick-start-waterflowkit
 
+## Version history
+
+- Customer-facing release notes: [CHANGELOG.md](CHANGELOG.md)
+- GitHub Releases: https://github.com/smarthomeshop/waterflowkit/releases
+
 ## Repository layout
 
 - `waterflowkit-v1/` — ESPHome configurations for V1 (ESP32)
