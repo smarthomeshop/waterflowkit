@@ -370,7 +370,7 @@ sensor:
     update_interval: 5s
     filters:
       - lambda: |-
-          return x * id(flow1_calibration_factor) * id(flow1_calibration_offset) / 60.0;
+          return x * id(flow1_calibration_factor) * id(flow1_calibration_offset);
     total:
       id: sensor_pulse_meter_total
       name: "Flow1 Total Consumption"
@@ -401,7 +401,7 @@ sensor:
     update_interval: 5s
     filters:
       - lambda: |-
-          return x * id(flow2_calibration_factor) * id(flow2_calibration_offset) / 60.0;
+          return x * id(flow2_calibration_factor) * id(flow2_calibration_offset);
     total:
       id: sens_2_sensor_pulse_meter_total
       name: "Flow2 Total Consumption"

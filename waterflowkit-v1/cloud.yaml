@@ -305,10 +305,10 @@ sensor:
         return 0;
       }
       // Convert L/min back to pulses/min
-      // L/min = (pulses/min) * calibration_factor * calibration_offset / 60
-      // pulses/min = L/min * 60 / calibration_factor / calibration_offset
+      // L/min = (pulses/min) * calibration_factor * calibration_offset
+      // pulses/min = L/min / calibration_factor / calibration_offset
       float lpm = id(water_usage).state;
-      float ppm = lpm * 60.0 / id(flow1_calibration_factor) / id(flow1_calibration_offset);
+      float ppm = lpm / id(flow1_calibration_factor) / id(flow1_calibration_offset);
       return (uint32_t)ppm;
 
   - platform: template
@@ -322,7 +322,7 @@ sensor:
       }
       // Convert L/min back to pulses/min
       float lpm = id(sens2_water_usage).state;
-      float ppm = lpm * 60.0 / id(flow2_calibration_factor) / id(flow2_calibration_offset);
+      float ppm = lpm / id(flow2_calibration_factor) / id(flow2_calibration_offset);
       return (uint32_t)ppm;
 
 # ====================
