@@ -1,0 +1,21 @@
+{
+  "name": "WaterFlowKit V2 WiFi",
+  "version": "2.2.0",
+  "home_assistant_domain": "esphome",
+  "new_install_skip_erase": false,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C6",
+      "ota": {
+        "path": "waterflowkit-v2-wifi/waterflowkit-esp32c6.ota.bin",
+        "md5": "822086899bad54ba33d4acdb53e3ee37"
+      },
+      "parts": [
+        {
+          "path": "waterflowkit-v2-wifi/waterflowkit-esp32c6.factory.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}
