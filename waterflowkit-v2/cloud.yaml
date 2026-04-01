@@ -1,0 +1,862 @@
+# ====================
+# WATERFLOWKIT CLOUD INTEGRATION - RAW DATA SYNC (V2)
+# ====================
+# Cloud sync module for WaterFlowKit V2
+#
+# This module is ONLY included in cloud firmware variants.
+# Users who install cloud firmware explicitly want cloud sync.
+# Therefore, cloud sync is ALWAYS active - no on/off switch needed.
+#
+# Features:
+# - Auto-registers on boot with MAC address
+# - Token-based authentication (Bearer)
+# - RAW DATA SYNC: Sends raw pulse counts to cloud
+#   * App handles sensor type selection and calibration
+#   * Users can change settings in app without OTA update
+# - Smart sync strategy:
+#   * Pulses: 60s (current pulse rates)
+#   * Totals: 5min delta-sync (only when changed)
+#   * Temperature: 5min (environment data)
+# - Batched requests (combines pending data)
+# - Visual feedback via blue LED
+# - Reset button available for troubleshooting
+# - Works with both WiFi and Ethernet
+# - Supports 4 flow sensors
+#
+# RAW DATA NOTES:
+# - Device sends RAW pulse counts (not calibrated L/min or L)
+# - App converts pulses to liters using user-selected sensor type
+# - Supported sensors: YF-B1/B7 (660), YF-B5/B6 (396), YF-B10 (450), YF-DN40-S (27), YF-DN50-S (12)
+
+# JSON component for parsing API responses
+json:
+
+substitutions:
+  # Cloud enabled flag (overrides base.yaml default)
+  cloud_enabled: "true"
+  # Cloud API configuration
+  cloud_api_url: "https://app.smarthomeshop.io"
+  cloud_api_version: "v1"
+  # Smart sync intervals
+  cloud_sync_interval_flow: "60s"
+  cloud_sync_interval_totals: "5min"
+  cloud_sync_interval_environment: "5min"
+
+# Auto-register on boot (cloud firmware = user wants cloud)
+esphome:
+  on_boot:
+    priority: -100
+    then:
+      - logger.log:
+          level: INFO
+          format: "Cloud module starting..."
+      - delay: 10s
+      - if:
+          condition:
+            lambda: "return !id(cloud_is_registered);"
+          then:
+            - logger.log:
+                level: INFO
+                format: "Device not registered, starting auto-registration..."
+            - script.execute: cloud_register
+
+# ====================
+# SNTP TIME (for cloud timestamps)
+# ====================
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "Europe/Amsterdam"
+    servers:
+      - "pool.ntp.org"
+      - "time.google.com"
+
+# ====================
+# GLOBALS (cloud credentials + state + smart sync)
+# ====================
+globals:
+  # === Cloud Credentials ===
+  - id: cloud_device_token
+    type: std::string
+    restore_value: true
+    initial_value: '""'
+
+  - id: cloud_device_id
+    type: std::string
+    restore_value: true
+    initial_value: '""'
+
+  - id: cloud_is_registered
+    type: bool
+    restore_value: true
+    initial_value: "false"
+
+  - id: cloud_is_registering
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: cloud_last_sync_success
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: cloud_sync_failures
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  - id: cloud_first_sync_timestamp
+    type: uint32_t
+    restore_value: true
+    initial_value: "0"
+
+  # === RAW Pulse Rate Averaging (for 60 sec window) ===
+  - id: flow1_ppm_sum
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: flow2_ppm_sum
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: flow3_ppm_sum
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: flow4_ppm_sum
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: flow_sample_count
+    type: int
+    restore_value: false
+    initial_value: "0"
+
+  # Previous pulse totals for delta sync
+  - id: prev_flow1_pulse_total
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: prev_flow2_pulse_total
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: prev_flow3_pulse_total
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: prev_flow4_pulse_total
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  # === Water On-Change Detection ===
+  - id: water_changed
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: last_water_sync_time
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  # === Batch Buffer - Pending data flags ===
+  - id: pending_flow_data
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: pending_totals_data
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: pending_environment_data
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  # === Computed averages - RAW pulses per minute ===
+  - id: avg_flow1_ppm
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: avg_flow2_ppm
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: avg_flow3_ppm
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+  - id: avg_flow4_ppm
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+# ====================
+# BUTTONS
+# ====================
+button:
+  # Button to reset cloud registration (for troubleshooting)
+  - platform: template
+    id: cloud_reset_button
+    name: "${friendly_name} Reset Cloud"
+    icon: "mdi:cloud-off"
+    entity_category: config
+    on_press:
+      - script.execute: cloud_reset
+
+# ====================
+# BINARY SENSORS
+# ====================
+binary_sensor:
+  # Cloud connection status
+  - platform: template
+    id: cloud_connected
+    name: "${friendly_name} Cloud Connected"
+    icon: "mdi:cloud-check"
+    entity_category: diagnostic
+    lambda: |-
+      return id(cloud_is_registered) && id(cloud_last_sync_success);
+
+# ====================
+# SENSORS
+# ====================
+sensor:
+  # Cloud sync failure counter
+  - platform: template
+    id: cloud_sync_failure_count
+    name: "${friendly_name} Cloud Sync Failures"
+    entity_category: diagnostic
+    icon: "mdi:alert-circle"
+    accuracy_decimals: 0
+    lambda: "return id(cloud_sync_failures);"
+    update_interval: 60s
+
+  # === RAW Pulse Total Sensors (for cloud sync) ===
+  # These template sensors convert calibrated totals back to raw pulses
+  # Formula: raw_pulses = liters / calibration_factor / calibration_offset
+  # This allows the app to handle sensor type selection and calibration
+
+  - platform: template
+    id: flow1_raw_pulse_total
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(sensor_pulse_meter_total1).has_state() || isnan(id(sensor_pulse_meter_total1).state)) {
+        return 0;
+      }
+      // Convert liters back to raw pulses
+      // liters = pulses * calibration_factor * calibration_offset
+      // pulses = liters / calibration_factor / calibration_offset
+      float liters = id(sensor_pulse_meter_total1).state;
+      float pulses = liters / id(flow1_calibration_factor) / id(flow1_calibration_offset);
+      return (uint32_t)pulses;
+
+  - platform: template
+    id: flow2_raw_pulse_total
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(sensor_pulse_meter_total2).has_state() || isnan(id(sensor_pulse_meter_total2).state)) {
+        return 0;
+      }
+      // Convert liters back to raw pulses
+      float liters = id(sensor_pulse_meter_total2).state;
+      float pulses = liters / id(flow2_calibration_factor) / id(flow2_calibration_offset);
+      return (uint32_t)pulses;
+
+  - platform: template
+    id: flow3_raw_pulse_total
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(sensor_pulse_meter_total3).has_state() || isnan(id(sensor_pulse_meter_total3).state)) {
+        return 0;
+      }
+      // Convert liters back to raw pulses
+      float liters = id(sensor_pulse_meter_total3).state;
+      float pulses = liters / id(flow3_calibration_factor) / id(flow3_calibration_offset);
+      return (uint32_t)pulses;
+
+  - platform: template
+    id: flow4_raw_pulse_total
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(sensor_pulse_meter_total4).has_state() || isnan(id(sensor_pulse_meter_total4).state)) {
+        return 0;
+      }
+      // Convert liters back to raw pulses
+      float liters = id(sensor_pulse_meter_total4).state;
+      float pulses = liters / id(flow4_calibration_factor) / id(flow4_calibration_offset);
+      return (uint32_t)pulses;
+
+  # === RAW Pulse Rate Sensors (pulses per minute) ===
+  - platform: template
+    id: flow1_raw_pulse_rate
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(water_usage1).has_state() || isnan(id(water_usage1).state)) {
+        return 0;
+      }
+      // Convert L/min back to pulses/min
+      // L/min = (pulses/min) * calibration_factor * calibration_offset / 60
+      // pulses/min = L/min * 60 / calibration_factor / calibration_offset
+      float lpm = id(water_usage1).state;
+      float ppm = lpm * 60.0 / id(flow1_calibration_factor) / id(flow1_calibration_offset);
+      return (uint32_t)ppm;
+
+  - platform: template
+    id: flow2_raw_pulse_rate
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(water_usage2).has_state() || isnan(id(water_usage2).state)) {
+        return 0;
+      }
+      // Convert L/min back to pulses/min
+      float lpm = id(water_usage2).state;
+      float ppm = lpm * 60.0 / id(flow2_calibration_factor) / id(flow2_calibration_offset);
+      return (uint32_t)ppm;
+
+  - platform: template
+    id: flow3_raw_pulse_rate
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(water_usage3).has_state() || isnan(id(water_usage3).state)) {
+        return 0;
+      }
+      // Convert L/min back to pulses/min
+      float lpm = id(water_usage3).state;
+      float ppm = lpm * 60.0 / id(flow3_calibration_factor) / id(flow3_calibration_offset);
+      return (uint32_t)ppm;
+
+  - platform: template
+    id: flow4_raw_pulse_rate
+    internal: true
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if (!id(water_usage4).has_state() || isnan(id(water_usage4).state)) {
+        return 0;
+      }
+      // Convert L/min back to pulses/min
+      float lpm = id(water_usage4).state;
+      float ppm = lpm * 60.0 / id(flow4_calibration_factor) / id(flow4_calibration_offset);
+      return (uint32_t)ppm;
+
+# ====================
+# TEXT SENSORS
+# ====================
+text_sensor:
+  # Cloud Device ID
+  - platform: template
+    id: cloud_device_id_sensor
+    name: "${friendly_name} Cloud Device ID"
+    entity_category: diagnostic
+    icon: "mdi:cloud-outline"
+    lambda: |-
+      if (id(cloud_device_id).length() > 0) {
+        return id(cloud_device_id);
+      }
+      return {"Not registered"};
+    update_interval: 60s
+
+  # Cloud Status
+  - platform: template
+    id: cloud_status_text
+    name: "${friendly_name} Cloud Status"
+    entity_category: diagnostic
+    icon: "mdi:cloud-question"
+    lambda: |-
+      if (!id(cloud_is_registered)) {
+        return {"Registering..."};
+      }
+      if (id(cloud_device_token).length() == 0) {
+        return {"No token"};
+      }
+      if (id(cloud_sync_failures) > 10) {
+        return {"Error: Too many failures"};
+      }
+      if (id(cloud_last_sync_success)) {
+        return {"Connected"};
+      }
+      return {"Syncing..."};
+    update_interval: 15s
+
+# ====================
+# SCRIPTS
+# ====================
+script:
+  # ============================================
+  # Device Registration Script
+  # ============================================
+  - id: cloud_register
+    mode: single
+    then:
+      # Prevent concurrent registration attempts
+      - if:
+          condition:
+            lambda: "return id(cloud_is_registering);"
+          then:
+            - logger.log:
+                level: DEBUG
+                format: "Registration already in progress, skipping"
+            - script.stop: cloud_register
+
+      - lambda: "id(cloud_is_registering) = true;"
+
+      - logger.log:
+          level: INFO
+          format: "Starting cloud registration..."
+
+      - wait_until:
+          condition:
+            lambda: "return id(wifi_mac_address).has_state();"
+          timeout: 30s
+
+      - wait_until:
+          condition:
+            lambda: "return id(wifi_ip_address).has_state() || id(ethernet_ip_address).has_state();"
+          timeout: 30s
+
+      - logger.log:
+          level: INFO
+          format: "Registering device with MAC: %s"
+          args: ["id(wifi_mac_address).state.c_str()"]
+
+      - http_request.post:
+          url: "${cloud_api_url}/api/${cloud_api_version}/devices/register"
+          request_headers:
+            Content-Type: "application/json"
+            User-Agent: "WaterFlowKit/${software_version}"
+            Accept: "application/json"
+          json: |-
+            root["mac_address"] = id(wifi_mac_address).state;
+            root["hardware_version"] = "${hardware_version}";
+            root["firmware_version"] = "${software_version}";
+            root["product"] = "waterflowkit";
+            root["flow_sensor_count"] = 4;
+            // Use wifi IP if available, otherwise ethernet
+            if (id(wifi_ip_address).has_state()) {
+              root["local_ip"] = id(wifi_ip_address).state;
+            } else if (id(ethernet_ip_address).has_state()) {
+              root["local_ip"] = id(ethernet_ip_address).state;
+            }
+          capture_response: true
+          max_response_buffer_size: 512
+          on_response:
+            then:
+              - lambda: |-
+                  ESP_LOGI("cloud", "Registration response - Status: %d", response->status_code);
+                  id(cloud_is_registering) = false;
+
+                  if (response->status_code == 200 || response->status_code == 201) {
+                    ESP_LOGD("cloud", "Response body: %s", body.c_str());
+                    
+                    json::parse_json(body, [](JsonObject root) -> bool {
+                      if (root["device_id"].is<const char*>() && root["token"].is<const char*>()) {
+                        id(cloud_device_id) = root["device_id"].as<std::string>();
+                        id(cloud_device_token) = root["token"].as<std::string>();
+                        id(cloud_is_registered) = true;
+                        id(cloud_sync_failures) = 0;
+                        ESP_LOGI("cloud", "Registration successful! Device ID: %s", id(cloud_device_id).c_str());
+                        return true;
+                      }
+                      ESP_LOGW("cloud", "Invalid response format");
+                      return false;
+                    });
+                  } else if (response->status_code == 422) {
+                    ESP_LOGW("cloud", "Registration failed: validation error (422)");
+                    id(cloud_sync_failures)++;
+                  } else if (response->status_code == 429) {
+                    ESP_LOGW("cloud", "Registration failed: rate limited (429)");
+                    id(cloud_sync_failures) += 5;
+                  } else {
+                    ESP_LOGW("cloud", "Registration failed: HTTP %d", response->status_code);
+                    id(cloud_sync_failures)++;
+                  }
+          on_error:
+            then:
+              - logger.log:
+                  level: WARN
+                  format: "Cloud registration network error"
+              - lambda: |-
+                  id(cloud_sync_failures)++;
+                  id(cloud_is_registering) = false;
+
+  # ============================================
+  # Flow Sample Collection (every 10 sec for averaging)
+  # Collects RAW pulses per minute for cloud sync
+  # ============================================
+  - id: cloud_collect_flow_sample
+    mode: single
+    then:
+      - lambda: |-
+          // Collect RAW pulses per minute for all 4 flow sensors
+          if (id(flow1_raw_pulse_rate).has_state()) {
+            id(flow1_ppm_sum) += (uint32_t)id(flow1_raw_pulse_rate).state;
+          }
+          if (id(flow2_raw_pulse_rate).has_state()) {
+            id(flow2_ppm_sum) += (uint32_t)id(flow2_raw_pulse_rate).state;
+          }
+          if (id(flow3_raw_pulse_rate).has_state()) {
+            id(flow3_ppm_sum) += (uint32_t)id(flow3_raw_pulse_rate).state;
+          }
+          if (id(flow4_raw_pulse_rate).has_state()) {
+            id(flow4_ppm_sum) += (uint32_t)id(flow4_raw_pulse_rate).state;
+          }
+          id(flow_sample_count)++;
+          ESP_LOGV("cloud", "Flow sample %d collected (raw pulses)", id(flow_sample_count));
+
+  # ============================================
+  # Flow Sync (every 60 sec - average)
+  # Sends RAW pulses per minute average to cloud
+  # ============================================
+  - id: cloud_sync_flow
+    mode: single
+    then:
+      - lambda: |-
+          if (id(flow_sample_count) > 0) {
+            // Calculate average RAW pulses per minute for all 4 sensors
+            id(avg_flow1_ppm) = id(flow1_ppm_sum) / id(flow_sample_count);
+            id(avg_flow2_ppm) = id(flow2_ppm_sum) / id(flow_sample_count);
+            id(avg_flow3_ppm) = id(flow3_ppm_sum) / id(flow_sample_count);
+            id(avg_flow4_ppm) = id(flow4_ppm_sum) / id(flow_sample_count);
+            id(pending_flow_data) = true;
+            ESP_LOGD("cloud", "Flow avg: %d/%d/%d/%d ppm (%d samples)",
+                     id(avg_flow1_ppm), id(avg_flow2_ppm), id(avg_flow3_ppm), id(avg_flow4_ppm), id(flow_sample_count));
+          }
+          id(flow1_ppm_sum) = 0;
+          id(flow2_ppm_sum) = 0;
+          id(flow3_ppm_sum) = 0;
+          id(flow4_ppm_sum) = 0;
+          id(flow_sample_count) = 0;
+
+      - script.execute: cloud_send_batch
+
+  # ============================================
+  # Totals Sync (every 5 min - delta check)
+  # Sends RAW pulse totals to cloud
+  # ============================================
+  - id: cloud_sync_totals
+    mode: single
+    then:
+      - lambda: |-
+          bool changed = false;
+
+          // Check if RAW pulse totals have changed for all 4 sensors
+          if (id(flow1_raw_pulse_total).has_state()) {
+            uint32_t current = (uint32_t)id(flow1_raw_pulse_total).state;
+            if (current != id(prev_flow1_pulse_total)) {
+              id(prev_flow1_pulse_total) = current;
+              changed = true;
+            }
+          }
+
+          if (id(flow2_raw_pulse_total).has_state()) {
+            uint32_t current = (uint32_t)id(flow2_raw_pulse_total).state;
+            if (current != id(prev_flow2_pulse_total)) {
+              id(prev_flow2_pulse_total) = current;
+              changed = true;
+            }
+          }
+
+          if (id(flow3_raw_pulse_total).has_state()) {
+            uint32_t current = (uint32_t)id(flow3_raw_pulse_total).state;
+            if (current != id(prev_flow3_pulse_total)) {
+              id(prev_flow3_pulse_total) = current;
+              changed = true;
+            }
+          }
+
+          if (id(flow4_raw_pulse_total).has_state()) {
+            uint32_t current = (uint32_t)id(flow4_raw_pulse_total).state;
+            if (current != id(prev_flow4_pulse_total)) {
+              id(prev_flow4_pulse_total) = current;
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            id(pending_totals_data) = true;
+            ESP_LOGD("cloud", "Pulse totals changed, flagging for sync");
+          } else {
+            ESP_LOGV("cloud", "Pulse totals unchanged, skipping");
+          }
+
+      - script.execute: cloud_send_batch
+
+  # ============================================
+  # Environment Sync (every 5 min)
+  # ============================================
+  - id: cloud_sync_environment
+    mode: single
+    then:
+      - lambda: |-
+          // Always sync environment data at interval
+          id(pending_environment_data) = true;
+          ESP_LOGD("cloud", "Environment data flagged for sync");
+
+      - script.execute: cloud_send_batch
+
+  # ============================================
+  # Batched Send - Combines all pending data
+  # ============================================
+  - id: cloud_send_batch
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: "return !id(cloud_is_registered);"
+          then:
+            - logger.log:
+                level: DEBUG
+                format: "Not registered, attempting registration"
+            - script.execute: cloud_register
+            - script.stop: cloud_send_batch
+
+      - if:
+          condition:
+            lambda: "return id(cloud_device_token).length() == 0;"
+          then:
+            - logger.log:
+                level: WARN
+                format: "No token, re-registering"
+            - lambda: "id(cloud_is_registered) = false;"
+            - script.execute: cloud_register
+            - script.stop: cloud_send_batch
+
+      - if:
+          condition:
+            lambda: "return id(cloud_sync_failures) > 10;"
+          then:
+            - logger.log:
+                level: WARN
+                format: "Too many failures (%d), backing off"
+                args: ["id(cloud_sync_failures)"]
+            - delay: 10min
+            - lambda: "id(cloud_sync_failures) = 0;"
+            - script.stop: cloud_send_batch
+
+      - if:
+          condition:
+            lambda: "return !id(pending_flow_data) && !id(pending_totals_data) && !id(pending_environment_data);"
+          then:
+            - logger.log:
+                level: DEBUG
+                format: "No pending data to sync"
+            - script.stop: cloud_send_batch
+
+      - logger.log:
+          level: DEBUG
+          format: "Sending batched data (flow:%d, totals:%d, env:%d)"
+          args:
+            [
+              "id(pending_flow_data)",
+              "id(pending_totals_data)",
+              "id(pending_environment_data)",
+            ]
+
+      - lambda: "id(cloud_last_sync_success) = false;"
+
+      - http_request.post:
+          url: "${cloud_api_url}/api/${cloud_api_version}/devices/ingest"
+          request_headers:
+            Content-Type: "application/json"
+            Authorization: !lambda |-
+              return ("Bearer " + id(cloud_device_token)).c_str();
+            User-Agent: "WaterFlowKit/${software_version}"
+            Accept: "application/json"
+          capture_response: true
+          max_response_buffer_size: 256
+          json: |-
+            root["device_id"] = id(cloud_device_id);
+            root["timestamp"] = id(sntp_time).now().timestamp;
+
+            // RAW DATA MODE - App handles calibration
+            root["data_mode"] = "raw";
+            root["flow_sensor_count"] = 4;
+
+            root["has_flow"] = id(pending_flow_data);
+            root["has_totals"] = id(pending_totals_data);
+            root["has_environment"] = id(pending_environment_data);
+
+            // === RAW FLOW DATA (pulses per minute, averaged over 60s) ===
+            // App converts to L/min using: L/min = ppm / pulses_per_liter / 60
+            if (id(pending_flow_data)) {
+              root["flow1_ppm"] = id(avg_flow1_ppm);
+              root["flow2_ppm"] = id(avg_flow2_ppm);
+              root["flow3_ppm"] = id(avg_flow3_ppm);
+              root["flow4_ppm"] = id(avg_flow4_ppm);
+            }
+
+            // === RAW TOTALS DATA (cumulative pulse counts) ===
+            // App converts to liters using: liters = pulses / pulses_per_liter
+            if (id(pending_totals_data)) {
+              if (id(flow1_raw_pulse_total).has_state()) {
+                root["flow1_pulse_total"] = (uint32_t)id(flow1_raw_pulse_total).state;
+              }
+              if (id(flow2_raw_pulse_total).has_state()) {
+                root["flow2_pulse_total"] = (uint32_t)id(flow2_raw_pulse_total).state;
+              }
+              if (id(flow3_raw_pulse_total).has_state()) {
+                root["flow3_pulse_total"] = (uint32_t)id(flow3_raw_pulse_total).state;
+              }
+              if (id(flow4_raw_pulse_total).has_state()) {
+                root["flow4_pulse_total"] = (uint32_t)id(flow4_raw_pulse_total).state;
+              }
+            }
+
+            // === TEMPERATURE DATA (already calibrated, no conversion needed) ===
+            if (id(pending_environment_data) || id(pending_flow_data)) {
+              // Water temperatures from NTC sensors
+              if (id(flow1_water_temperature).has_state() && !isnan(id(flow1_water_temperature).state)) {
+                root["flow1_water_temp_c"] = id(flow1_water_temperature).state;
+              }
+              if (id(flow2_water_temperature).has_state() && !isnan(id(flow2_water_temperature).state)) {
+                root["flow2_water_temp_c"] = id(flow2_water_temperature).state;
+              }
+              if (id(flow3_water_temperature).has_state() && !isnan(id(flow3_water_temperature).state)) {
+                root["flow3_water_temp_c"] = id(flow3_water_temperature).state;
+              }
+              if (id(flow4_water_temperature).has_state() && !isnan(id(flow4_water_temperature).state)) {
+                root["flow4_water_temp_c"] = id(flow4_water_temperature).state;
+              }
+            }
+
+            // === ENVIRONMENT (HDC1080) ===
+            if (id(pending_environment_data)) {
+              if (id(sensor_temperature).has_state() && !isnan(id(sensor_temperature).state)) {
+                root["temperature_c"] = id(sensor_temperature).state;
+              }
+              if (id(sensor_humidity).has_state() && !isnan(id(sensor_humidity).state)) {
+                root["humidity_pct"] = id(sensor_humidity).state;
+              }
+            }
+
+            // === DEVICE INFO ===
+            root["firmware_version"] = "${software_version}";
+            root["hardware_version"] = "${hardware_version}";
+
+          on_response:
+            then:
+              - lambda: |-
+                  if (response->status_code == 200) {
+                    id(cloud_last_sync_success) = true;
+                    id(cloud_sync_failures) = 0;
+
+                    id(pending_flow_data) = false;
+                    id(pending_totals_data) = false;
+                    id(pending_environment_data) = false;
+
+                    if (id(cloud_first_sync_timestamp) == 0) {
+                      id(cloud_first_sync_timestamp) = id(sntp_time).now().timestamp;
+                      ESP_LOGI("cloud", "First sync timestamp recorded");
+                    }
+
+                    ESP_LOGD("cloud", "Batch sync successful (raw data mode)");
+                  } else if (response->status_code == 401) {
+                    ESP_LOGW("cloud", "Token invalid/expired, re-registering");
+                    id(cloud_is_registered) = false;
+                    id(cloud_device_token) = "";
+                    id(cloud_sync_failures)++;
+                  } else if (response->status_code == 429) {
+                    ESP_LOGW("cloud", "Rate limited, backing off");
+                    id(cloud_sync_failures) += 5;
+                  } else {
+                    ESP_LOGW("cloud", "Sync failed: HTTP %d", response->status_code);
+                    id(cloud_sync_failures)++;
+                  }
+
+              - if:
+                  condition:
+                    lambda: "return id(cloud_last_sync_success);"
+                  then:
+                    - light.turn_on:
+                        id: light_led_blue
+                        flash_length: 100ms
+
+          on_error:
+            then:
+              - lambda: |-
+                  id(cloud_last_sync_success) = false;
+                  id(cloud_sync_failures)++;
+                  ESP_LOGW("cloud", "Batch sync network error, failures: %d", id(cloud_sync_failures));
+
+  # ============================================
+  # Reset Cloud Registration Script
+  # ============================================
+  - id: cloud_reset
+    mode: single
+    then:
+      - logger.log:
+          level: INFO
+          format: "Resetting cloud registration..."
+      - lambda: |-
+          id(cloud_device_id) = "";
+          id(cloud_device_token) = "";
+          id(cloud_is_registered) = false;
+          id(cloud_last_sync_success) = false;
+          id(cloud_sync_failures) = 0;
+          id(cloud_first_sync_timestamp) = 0;
+          id(pending_flow_data) = false;
+          id(pending_totals_data) = false;
+          id(pending_environment_data) = false;
+          id(flow1_ppm_sum) = 0;
+          id(flow2_ppm_sum) = 0;
+          id(flow3_ppm_sum) = 0;
+          id(flow4_ppm_sum) = 0;
+          id(flow_sample_count) = 0;
+      - logger.log:
+          level: INFO
+          format: "Cloud registration reset complete"
+      - delay: 5s
+      - script.execute: cloud_register
+
+# ====================
+# INTERVALS (Smart Cloud Sync)
+# ====================
+interval:
+  # Flow sample collection every 10 seconds (for 60s average)
+  - interval: 10s
+    then:
+      - script.execute: cloud_collect_flow_sample
+
+  # Flow sync every 60 seconds (sends average)
+  - interval: ${cloud_sync_interval_flow}
+    then:
+      - script.execute: cloud_sync_flow
+
+  # Totals sync every 5 minutes (delta-synced)
+  - interval: ${cloud_sync_interval_totals}
+    then:
+      - script.execute: cloud_sync_totals
+
+  # Environment sync every 5 minutes
+  - interval: ${cloud_sync_interval_environment}
+    then:
+      - script.execute: cloud_sync_environment

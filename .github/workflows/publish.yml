@@ -9,16 +9,16 @@ on:
         required: false
         type: boolean
         default: false
-  # Scheduled build: rebuild all firmware monthly with latest ESPHome
-  # ESPHome releases new versions around the 15th of each month
-  # We build on the 20th to give ESPHome ~5 days for bugfix releases (e.g., 2025.11.1, 2025.11.2)
-  # This ensures we ship stable firmware instead of potentially buggy .0 releases
+  # Scheduled build: rebuild all firmware monthly with latest ESPHome.
+  # ESPHome releases typically land around the 15th, so we rebuild on the
+  # 20th to pick up the new release a few days later after initial fixes.
   schedule:
-    - cron: "0 3 20 * *" # Every 20th of the month at 03:00 UTC
+    - cron: "0 3 20 * *"
   push:
     branches:
       - main
     paths:
+      - ".github/workflows/**"
       - "waterflowkit-v1/**"
       - "waterflowkit-v2/**"
     tags:
@@ -28,9 +28,6 @@ permissions:
   contents: write
 
 jobs:
-  # ============================================
-  # Detect which versions have changed
-  # ============================================
   detect-changes:
     name: Detect changed versions
     runs-on: ubuntu-latest
@@ -49,55 +46,60 @@ jobs:
         id: changes
         shell: bash
         run: |
-          # For workflow_dispatch with force_all, build everything
+          set -euo pipefail
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force_all }}" == "true" ]]; then
             echo "Force building all versions"
-            echo "v1=true" >> $GITHUB_OUTPUT
-            echo "v2=true" >> $GITHUB_OUTPUT
+            echo "v1=true" >> "$GITHUB_OUTPUT"
+            echo "v2=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # For scheduled runs, build everything (to get latest ESPHome)
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             echo "Scheduled build - rebuilding all versions with latest ESPHome"
-            echo "v1=true" >> $GITHUB_OUTPUT
-            echo "v2=true" >> $GITHUB_OUTPUT
+            echo "v1=true" >> "$GITHUB_OUTPUT"
+            echo "v2=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # For tags, build everything
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             echo "Tag detected, building all versions"
-            echo "v1=true" >> $GITHUB_OUTPUT
-            echo "v2=true" >> $GITHUB_OUTPUT
+            echo "v1=true" >> "$GITHUB_OUTPUT"
+            echo "v2=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # For PRs and pushes, detect changes
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             BASE_SHA=${{ github.event.pull_request.base.sha }}
             HEAD_SHA=${{ github.event.pull_request.head.sha }}
           else
-            # For push events, compare with previous commit
             BASE_SHA=${{ github.event.before }}
             HEAD_SHA=${{ github.sha }}
           fi
 
-          # Check if base SHA is valid (not all zeros for first push)
           if [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
             echo "First push detected, building all versions"
-            echo "v1=true" >> $GITHUB_OUTPUT
-            echo "v2=true" >> $GITHUB_OUTPUT
+            echo "v1=true" >> "$GITHUB_OUTPUT"
+            echo "v2=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Detect changes in each version folder
-          V1_CHANGED=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep -q "^waterflowkit-v1/" && echo "true" || echo "false")
-          V2_CHANGED=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep -q "^waterflowkit-v2/" && echo "true" || echo "false")
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
 
-          echo "v1=$V1_CHANGED" >> $GITHUB_OUTPUT
-          echo "v2=$V2_CHANGED" >> $GITHUB_OUTPUT
+          if echo "$CHANGED_FILES" | grep -q "^.github/workflows/"; then
+            echo "Workflow changes detected, rebuilding all versions"
+            echo "v1=true" >> "$GITHUB_OUTPUT"
+            echo "v2=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
+          V1_CHANGED=$(echo "$CHANGED_FILES" | grep -q "^waterflowkit-v1/" && echo "true" || echo "false")
+          V2_CHANGED=$(echo "$CHANGED_FILES" | grep -q "^waterflowkit-v2/" && echo "true" || echo "false")
+
+          echo "v1=$V1_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "v2=$V2_CHANGED" >> "$GITHUB_OUTPUT"
           echo "V1 changed: $V1_CHANGED"
           echo "V2 changed: $V2_CHANGED"
 
@@ -107,191 +109,315 @@ jobs:
         run: |
           set -euo pipefail
 
-          # For scheduled builds, just use current versions (no increment)
           IS_SCHEDULED="${{ github.event_name == 'schedule' }}"
 
           update_version() {
-            local VERSION_FILE=$1
-            local OUTPUT_NAME=$2
+            local version_file=$1
+            local output_name=$2
 
-            if [[ ! -f "$VERSION_FILE" ]]; then
-              echo "${OUTPUT_NAME}=1.0" >> $GITHUB_OUTPUT
+            if [[ ! -f "$version_file" ]]; then
+              echo "${output_name}=1.0" >> "$GITHUB_OUTPUT"
               return
             fi
 
-            CURRENT_VERSION=$(grep "software_version:" "$VERSION_FILE" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
-            echo "Current version for $VERSION_FILE: $CURRENT_VERSION"
+            current_version=$(grep "software_version:" "$version_file" | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/')
+            echo "Current version for $version_file: $current_version"
 
-            # For scheduled builds, keep current version (just rebuild with latest ESPHome)
             if [[ "$IS_SCHEDULED" == "true" ]]; then
-              echo "${OUTPUT_NAME}=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
-              echo "Scheduled build - keeping version: $CURRENT_VERSION"
+              echo "${output_name}=${current_version}" >> "$GITHUB_OUTPUT"
+              echo "Scheduled build - keeping version: $current_version"
               return
             fi
 
-            # For tags, use the tag version
             if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" =~ ^v[0-9]+(\.[0-9]+)*$ ]]; then
-              NEW_VERSION="${GITHUB_REF_NAME#v}"
+              new_version="${GITHUB_REF_NAME#v}"
             else
-              # Increment minor version
-              if [[ "$CURRENT_VERSION" =~ ^([0-9]+)\.([0-9]+)(.*)$ ]]; then
-                MAJOR="${BASH_REMATCH[1]}"
-                MINOR="${BASH_REMATCH[2]}"
-                SUFFIX="${BASH_REMATCH[3]}"
-                NEW_MINOR=$((MINOR + 1))
-                NEW_VERSION="${MAJOR}.${NEW_MINOR}${SUFFIX}"
+              if [[ "$current_version" =~ ^([0-9]+)\.([0-9]+)(.*)$ ]]; then
+                major="${BASH_REMATCH[1]}"
+                minor="${BASH_REMATCH[2]}"
+                suffix="${BASH_REMATCH[3]}"
+                new_minor=$((minor + 1))
+                new_version="${major}.${new_minor}${suffix}"
               else
-                SHORTSHA=$(echo "${GITHUB_SHA}" | cut -c1-7)
-                NEW_VERSION="dev-${SHORTSHA}"
+                shortsha=$(echo "${GITHUB_SHA}" | cut -c1-7)
+                new_version="dev-${shortsha}"
               fi
             fi
 
-            echo "${OUTPUT_NAME}=${NEW_VERSION}" >> $GITHUB_OUTPUT
-            echo "New version for $VERSION_FILE: $NEW_VERSION"
+            echo "${output_name}=${new_version}" >> "$GITHUB_OUTPUT"
+            echo "New version for $version_file: $new_version"
           }
 
-          # Get/update versions for each changed version
           if [[ "${{ steps.changes.outputs.v1 }}" == "true" ]]; then
             update_version "waterflowkit-v1/base.yaml" "v1_version"
           else
-            # Just read current version without incrementing
-            V1_CURRENT=$(grep "software_version:" "waterflowkit-v1/base.yaml" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/' || echo "1.0")
-            echo "v1_version=$V1_CURRENT" >> $GITHUB_OUTPUT
+            v1_current=$(grep "software_version:" "waterflowkit-v1/base.yaml" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/' || echo "1.0")
+            echo "v1_version=$v1_current" >> "$GITHUB_OUTPUT"
           fi
 
           if [[ "${{ steps.changes.outputs.v2 }}" == "true" ]]; then
             update_version "waterflowkit-v2/base.yaml" "v2_version"
           else
-            V2_CURRENT=$(grep "software_version:" "waterflowkit-v2/base.yaml" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/' || echo "1.0")
-            echo "v2_version=$V2_CURRENT" >> $GITHUB_OUTPUT
+            v2_current=$(grep "software_version:" "waterflowkit-v2/base.yaml" 2>/dev/null | head -1 | sed 's/.*: *"\([^"]*\)".*/\1/' || echo "1.0")
+            echo "v2_version=$v2_current" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit version updates
-        # Don't update versions on scheduled builds (just rebuild with latest ESPHome)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
-          CHANGES_MADE=false
+          set -euo pipefail
 
-          # Update V1 if changed
+          changes_made=false
+
           if [[ "${{ steps.changes.outputs.v1 }}" == "true" ]]; then
             sed -i "s/^\s*software_version: \".*\"/  software_version: \"${{ steps.versions.outputs.v1_version }}\"/" waterflowkit-v1/base.yaml
-            CHANGES_MADE=true
+            changes_made=true
           fi
 
-          # Update V2 if changed
           if [[ "${{ steps.changes.outputs.v2 }}" == "true" ]]; then
             sed -i "s/^\s*software_version: \".*\"/  software_version: \"${{ steps.versions.outputs.v2_version }}\"/" waterflowkit-v2/base.yaml
-            CHANGES_MADE=true
+            changes_made=true
           fi
 
-          if [[ "$CHANGES_MADE" == "true" ]] && ! git diff --quiet; then
+          if [[ "$changes_made" == "true" ]] && ! git diff --quiet; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
             git add waterflowkit-v*/base.yaml
-            
-            # Build commit message showing which versions were updated
-            MSG="chore: update versions"
-            [[ "${{ steps.changes.outputs.v1 }}" == "true" ]] && MSG="$MSG V1=${{ steps.versions.outputs.v1_version }}"
-            [[ "${{ steps.changes.outputs.v2 }}" == "true" ]] && MSG="$MSG V2=${{ steps.versions.outputs.v2_version }}"
-            MSG="$MSG [skip ci]"
-            
-            git commit -m "$MSG" || exit 0
+
+            msg="chore: update versions"
+            [[ "${{ steps.changes.outputs.v1 }}" == "true" ]] && msg="$msg V1=${{ steps.versions.outputs.v1_version }}"
+            [[ "${{ steps.changes.outputs.v2 }}" == "true" ]] && msg="$msg V2=${{ steps.versions.outputs.v2_version }}"
+            msg="$msg [skip ci]"
+
+            git commit -m "$msg" || exit 0
             git push || echo "Nothing to push"
           fi
 
-  # ============================================
-  # WaterFlowKit V1 Variants (WiFi only + WiFi Cloud)
-  # ============================================
-  publish-v1-wifi:
-    name: Publish WaterFlowKit V1 WiFi
+  build-v1-wifi:
+    name: Build WaterFlowKit V1 WiFi
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v1_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v1/waterflowkit-wifi.yaml
       name: WaterFlowKit V1 WiFi
-      manifest_filename: waterflowkit-v1-wifi-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v1-wifi
       software_version: ${{ needs.detect-changes.outputs.v1_version }}
       base_path: waterflowkit-v1
 
-  publish-v1-wifi-cloud:
-    name: Publish WaterFlowKit V1 WiFi Cloud
+  build-v1-wifi-cloud:
+    name: Build WaterFlowKit V1 WiFi Cloud
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v1_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v1/waterflowkit-wifi-cloud.yaml
       name: WaterFlowKit V1 WiFi Cloud
-      manifest_filename: waterflowkit-v1-wifi-cloud-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v1-wifi-cloud
       software_version: ${{ needs.detect-changes.outputs.v1_version }}
       base_path: waterflowkit-v1
 
-  # ============================================
-  # WaterFlowKit V2 Variants (WiFi + Ethernet + Cloud variants)
-  # ============================================
-  publish-v2-wifi:
-    name: Publish WaterFlowKit V2 WiFi
+  build-v2-wifi:
+    name: Build WaterFlowKit V2 WiFi
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-wifi.yaml
       name: WaterFlowKit V2 WiFi
-      manifest_filename: waterflowkit-v2-wifi-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-wifi
       software_version: ${{ needs.detect-changes.outputs.v2_version }}
       base_path: waterflowkit-v2
 
-  publish-v2-wifi-cloud:
-    name: Publish WaterFlowKit V2 WiFi Cloud
+  build-v2-wifi-cloud:
+    name: Build WaterFlowKit V2 WiFi Cloud
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-wifi-cloud.yaml
       name: WaterFlowKit V2 WiFi Cloud
-      manifest_filename: waterflowkit-v2-wifi-cloud-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-wifi-cloud
       software_version: ${{ needs.detect-changes.outputs.v2_version }}
       base_path: waterflowkit-v2
 
-  publish-v2-ethernet:
-    name: Publish WaterFlowKit V2 Ethernet
+  build-v2-ethernet:
+    name: Build WaterFlowKit V2 Ethernet
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-ethernet.yaml
       name: WaterFlowKit V2 Ethernet
-      manifest_filename: waterflowkit-v2-ethernet-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-ethernet
       software_version: ${{ needs.detect-changes.outputs.v2_version }}
       base_path: waterflowkit-v2
 
-  publish-v2-ethernet-cloud:
-    name: Publish WaterFlowKit V2 Ethernet Cloud
+  build-v2-ethernet-cloud:
+    name: Build WaterFlowKit V2 Ethernet Cloud
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_changed == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-ethernet-cloud.yaml
       name: WaterFlowKit V2 Ethernet Cloud
-      manifest_filename: waterflowkit-v2-ethernet-cloud-manifest.json
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-ethernet-cloud
       software_version: ${{ needs.detect-changes.outputs.v2_version }}
       base_path: waterflowkit-v2
+
+  publish-gh-pages:
+    name: Publish firmware to GitHub Pages
+    needs:
+      - detect-changes
+      - build-v1-wifi
+      - build-v1-wifi-cloud
+      - build-v2-wifi
+      - build-v2-wifi-cloud
+      - build-v2-ethernet
+      - build-v2-ethernet-cloud
+    if: |
+      always() &&
+      github.event_name != 'pull_request' &&
+      github.ref == 'refs/heads/main' &&
+      (
+        needs.build-v1-wifi.result == 'success' ||
+        needs.build-v1-wifi-cloud.result == 'success' ||
+        needs.build-v2-wifi.result == 'success' ||
+        needs.build-v2-wifi-cloud.result == 'success' ||
+        needs.build-v2-ethernet.result == 'success' ||
+        needs.build-v2-ethernet-cloud.result == 'success'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Download V1 WiFi artifact
+        if: needs.build-v1-wifi.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V1 WiFi
+          path: output
+
+      - name: Download V1 WiFi Cloud artifact
+        if: needs.build-v1-wifi-cloud.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V1 WiFi Cloud
+          path: output
+
+      - name: Download V2 WiFi artifact
+        if: needs.build-v2-wifi.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V2 WiFi
+          path: output
+
+      - name: Download V2 WiFi Cloud artifact
+        if: needs.build-v2-wifi-cloud.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V2 WiFi Cloud
+          path: output
+
+      - name: Download V2 Ethernet artifact
+        if: needs.build-v2-ethernet.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V2 Ethernet
+          path: output
+
+      - name: Download V2 Ethernet Cloud artifact
+        if: needs.build-v2-ethernet-cloud.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: WaterFlowKit V2 Ethernet Cloud
+          path: output
+
+      - name: Create manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          create_manifest() {
+            local variant_dir=$1
+            local manifest_name=$2
+            local display_name=$3
+            local version=$4
+            local manifest_file="output/${variant_dir}/manifest.json"
+
+            if [[ ! -f "$manifest_file" ]]; then
+              echo "Skipping ${variant_dir}; manifest.json not found"
+              return
+            fi
+
+            jq --arg dir "$variant_dir" --arg name "$display_name" --arg version "$version" '{
+              "name": $name,
+              "version": $version,
+              "home_assistant_domain": "esphome",
+              "new_install_skip_erase": false,
+              "builds": [.]
+            } |
+            .builds[0].ota.path = ($dir + "/" + .builds[0].ota.path) |
+            .builds[0].parts[].path = ($dir + "/" + .builds[0].parts[].path)' \
+              "$manifest_file" > "output/${manifest_name}"
+          }
+
+          create_manifest "waterflowkit-v1-wifi" "waterflowkit-v1-wifi-manifest.json" "WaterFlowKit V1 WiFi" "${{ needs.detect-changes.outputs.v1_version }}"
+          create_manifest "waterflowkit-v1-wifi-cloud" "waterflowkit-v1-wifi-cloud-manifest.json" "WaterFlowKit V1 WiFi Cloud" "${{ needs.detect-changes.outputs.v1_version }}"
+          create_manifest "waterflowkit-v2-wifi" "waterflowkit-v2-wifi-manifest.json" "WaterFlowKit V2 WiFi" "${{ needs.detect-changes.outputs.v2_version }}"
+          create_manifest "waterflowkit-v2-wifi-cloud" "waterflowkit-v2-wifi-cloud-manifest.json" "WaterFlowKit V2 WiFi Cloud" "${{ needs.detect-changes.outputs.v2_version }}"
+          create_manifest "waterflowkit-v2-ethernet" "waterflowkit-v2-ethernet-manifest.json" "WaterFlowKit V2 Ethernet" "${{ needs.detect-changes.outputs.v2_version }}"
+          create_manifest "waterflowkit-v2-ethernet-cloud" "waterflowkit-v2-ethernet-cloud-manifest.json" "WaterFlowKit V2 Ethernet Cloud" "${{ needs.detect-changes.outputs.v2_version }}"
+
+      - name: Create README for gh-pages
+        shell: bash
+        run: |
+          cat > output/README.md <<'EOF'
+          # WaterFlowKit firmware – GitHub Pages branch (gh-pages)
+
+          This branch hosts the public firmware artifacts and manifests for WaterFlowKit.
+          It is served via GitHub Pages and is intended to be consumed by:
+          - ESP Web Tools (browser-based flashing)
+          - OTA update integrations (using the JSON manifest)
+
+          ## Do not edit manually
+          Files in this branch are generated by the CI workflow in the default branch.
+          Any manual changes will be overwritten on the next publish.
+
+          ## Layout
+          - `waterflowkit-v1-wifi/`
+          - `waterflowkit-v1-wifi-cloud/`
+          - `waterflowkit-v2-wifi/`
+          - `waterflowkit-v2-wifi-cloud/`
+          - `waterflowkit-v2-ethernet/`
+          - `waterflowkit-v2-ethernet-cloud/`
+          - `*-manifest.json` aggregate manifests for OTA and ESP Web Tools
+          EOF
+
+      - name: Debug output structure
+        run: find output -maxdepth 2 -type f | sort
+
+      - name: Deploy to gh-pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: output
+          clean: false
+          force: false
+          attempt-limit: 6
