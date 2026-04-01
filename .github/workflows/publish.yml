@@ -460,7 +460,7 @@ jobs:
             local tag_name=$1
             local title=$2
 
-            if gh release view "$tag_name" >/dev/null 2>&1; then
+            if gh release view "$tag_name" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               echo "Release $tag_name already exists, skipping"
               return
             fi
@@ -471,6 +471,7 @@ jobs:
               > release-notes.txt
 
             gh release create "$tag_name" \
+              -R "$GITHUB_REPOSITORY" \
               --verify-tag \
               --title "$title" \
               --notes-file release-notes.txt
