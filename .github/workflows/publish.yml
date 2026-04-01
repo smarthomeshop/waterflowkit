@@ -465,12 +465,15 @@ jobs:
               return
             fi
 
+            printf '%s\n\n%s\n' \
+              "Customer-facing firmware notes live in CHANGELOG.md." \
+              "Changelog: https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md" \
+              > release-notes.txt
+
             gh release create "$tag_name" \
               --verify-tag \
               --title "$title" \
-              --notes "Customer-facing firmware notes live in CHANGELOG.md.
-
-Changelog: https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md"
+              --notes-file release-notes.txt
           }
 
           if [[ "${{ needs.detect-changes.outputs.v1_changed }}" == "true" && ! "${{ needs.detect-changes.outputs.v1_version }}" =~ ^dev- ]]; then
