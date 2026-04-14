@@ -236,8 +236,12 @@ button:
     entity_category: config
     on_press:
       then:
-        - lambda: |-
-            id(firmware_update).perform(true);
+        - script.execute: sync_selected_firmware_source
+        - update.check:
+            id: firmware_update
+        - update.perform:
+            id: firmware_update
+            force_update: true
 
 # === LED Outputs ===
 output:
