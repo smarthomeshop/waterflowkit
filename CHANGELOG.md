@@ -6,7 +6,41 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
-- Add new customer-facing changes here before the next release is published.
+- Add customer-facing firmware notes here before merging a PR.
+
+## [WaterFlowKit V2 2.6.0] - 2026-04-14
+
+### Added
+
+- Added a dedicated **Firmware Update** button in Home Assistant for manual firmware installation.
+
+### Changed
+
+- Switching firmware variants now follows a clear two-step flow: choose **Firmware Type**, then press **Firmware Update**.
+
+## [WaterFlowKit V1 1.7] - 2026-04-14
+
+### Added
+
+- Added a dedicated **Firmware Update** button in Home Assistant for manual firmware installation.
+
+### Changed
+
+- Switching firmware variants now follows a clear two-step flow: choose **Firmware Type**, then press **Firmware Update**.
+
+## [WaterFlowKit V2 2.5.0] - 2026-04-01
+
+### Changed
+
+- No on-device behavior changes in this release.
+- Improved the GitHub release publishing flow so firmware releases and version tags are created more reliably.
+
+## [WaterFlowKit V1 1.6] - 2026-04-01
+
+### Changed
+
+- No on-device behavior changes in this release.
+- Improved the GitHub release publishing flow so firmware releases and version tags are created more reliably.
 
 ## [WaterFlowKit V2 2.3.0] - 2026-04-01
 
