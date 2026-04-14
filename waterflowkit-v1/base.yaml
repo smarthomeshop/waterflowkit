@@ -27,16 +27,9 @@ esphome:
   on_boot:
     - priority: 610
       then:
-        - lambda: |-
-            std::string option = id(firmware_selector).current_option();
-            if (option == "WiFi Cloud") {
-              ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
-              id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
-            } else {
-              ESP_LOGI("main", "OTA updates set to use WiFi firmware");
-              id(firmware_update).set_source_url("${wifi_manifest_url}");
-            }
-        - component.update: firmware_update
+        - script.execute: sync_selected_firmware_source
+        - update.check:
+            id: firmware_update
 
 esp32:
   board: esp32dev
@@ -70,6 +63,19 @@ update:
     id: firmware_update
     source: ${wifi_manifest_url}
 
+script:
+  - id: sync_selected_firmware_source
+    then:
+      - lambda: |-
+          std::string option = id(firmware_selector).current_option();
+          if (option == "WiFi Cloud") {
+            ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
+            id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
+          } else {
+            ESP_LOGI("main", "OTA updates set to use WiFi firmware");
+            id(firmware_update).set_source_url("${wifi_manifest_url}");
+          }
+
 # === Firmware Selector ===
 select:
   - platform: template
@@ -85,16 +91,9 @@ select:
     initial_option: ${default_network}
     on_value:
       then:
-        - lambda: |-
-            std::string option = id(firmware_selector).current_option();
-            if (option == "WiFi Cloud") {
-              ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
-              id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
-            } else {
-              ESP_LOGI("main", "OTA updates set to use WiFi firmware");
-              id(firmware_update).set_source_url("${wifi_manifest_url}");
-            }
-        - component.update: firmware_update
+        - script.execute: sync_selected_firmware_source
+        - update.check:
+            id: firmware_update
 
   # Flow1 Sensor Type Selector
   - platform: template
@@ -231,6 +230,14 @@ button:
     name: "${friendly_name} Factory Reset"
     entity_category: config
     disabled_by_default: true
+  - platform: template
+    name: "${friendly_name} Firmware Update"
+    id: update_firmware
+    entity_category: config
+    on_press:
+      then:
+        - lambda: |-
+            id(firmware_update).perform(true);
 
 # === LED Outputs ===
 output:

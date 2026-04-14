@@ -86,4 +86,5 @@ After installation, you can configure the following settings in Home Assistant:
 
 - **Flow1/Flow2 Sensor Type** - Select your connected flow sensor model
 - **Flow1/Flow2 Calibration %** - Fine-tune calibration (100% = default, adjust based on measured vs actual flow)
-- **Firmware Type** - Switch between WiFi, Ethernet, WiFi Cloud, or Ethernet Cloud firmware
+- **Firmware Type** - Choose the target firmware variant (WiFi, Ethernet, WiFi Cloud, or Ethernet Cloud)
+- **Firmware Update** - Press this button in Home Assistant to install the selected firmware variant
