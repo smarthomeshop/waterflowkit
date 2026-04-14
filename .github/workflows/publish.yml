@@ -151,22 +151,23 @@ jobs:
           echo "Changed files:"
           echo "$CHANGED_FILES"
 
-          if echo "$CHANGED_FILES" | grep -q "^.github/workflows/"; then
-            echo "Workflow changes detected, rebuilding all versions without creating new firmware versions"
-            echo "v1=false" >> "$GITHUB_OUTPUT"
-            echo "v2=false" >> "$GITHUB_OUTPUT"
-            echo "v1_build=true" >> "$GITHUB_OUTPUT"
-            echo "v2_build=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
           V1_CHANGED=$(echo "$CHANGED_FILES" | grep -Eq "^waterflowkit-v1/.*\.ya?ml$" && echo "true" || echo "false")
           V2_CHANGED=$(echo "$CHANGED_FILES" | grep -Eq "^waterflowkit-v2/.*\.ya?ml$" && echo "true" || echo "false")
+          WORKFLOW_CHANGED=$(echo "$CHANGED_FILES" | grep -q "^.github/workflows/" && echo "true" || echo "false")
+
+          if [[ "$WORKFLOW_CHANGED" == "true" ]]; then
+            echo "Workflow changes detected; rebuilding all variants while preserving real firmware change detection"
+          fi
 
           echo "v1=$V1_CHANGED" >> "$GITHUB_OUTPUT"
           echo "v2=$V2_CHANGED" >> "$GITHUB_OUTPUT"
-          echo "v1_build=$V1_CHANGED" >> "$GITHUB_OUTPUT"
-          echo "v2_build=$V2_CHANGED" >> "$GITHUB_OUTPUT"
+          if [[ "$WORKFLOW_CHANGED" == "true" ]]; then
+            echo "v1_build=true" >> "$GITHUB_OUTPUT"
+            echo "v2_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "v1_build=$V1_CHANGED" >> "$GITHUB_OUTPUT"
+            echo "v2_build=$V2_CHANGED" >> "$GITHUB_OUTPUT"
+          fi
           echo "V1 changed: $V1_CHANGED"
           echo "V2 changed: $V2_CHANGED"
 
