@@ -370,11 +370,12 @@ button:
     name: "${friendly_name} Firmware Update"
     id: update_firmware
     entity_category: config
+    icon: "mdi:update"
     on_press:
       then:
         - script.execute: sync_selected_firmware_source
         - lambda: |-
-            ESP_LOGI("main", "Refreshing OTA metadata before installing selected firmware");
+            ESP_LOGI("main", "Refreshing OTA metadata before installing selected firmware variant");
         - update.check:
             id: firmware_update
         - update.perform:
