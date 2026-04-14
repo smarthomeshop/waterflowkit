@@ -6,7 +6,7 @@ substitutions:
   # Product identification
   device_name: waterflowkit
   friendly_name: WaterFlowKit
-  software_version: "1.7"
+  software_version: "1.8"
   hardware_version: "V1"
   
   # OTA manifest URLs
