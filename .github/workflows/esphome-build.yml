@@ -71,7 +71,7 @@ jobs:
       esphome-build-name: ${{ steps.esphome-build.outputs.name }}
       project-version: ${{ steps.esphome-build.outputs.project-version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Compute version and inject into YAML
         shell: bash
@@ -127,7 +127,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/download-artifact@v4
         with:

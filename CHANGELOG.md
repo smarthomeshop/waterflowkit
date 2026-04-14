@@ -8,6 +8,18 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 - Add customer-facing firmware notes here before merging a PR.
 
+## [WaterFlowKit V2 2.7.0] - 2026-04-14
+
+### Fixed
+
+- The **Firmware Update** button now refreshes OTA metadata before installation, so changing **Firmware Type** to Ethernet no longer flashes the previously cached WiFi firmware.
+
+## [WaterFlowKit V1 1.8] - 2026-04-14
+
+### Fixed
+
+- The **Firmware Update** button now refreshes OTA metadata before installation, so changing **Firmware Type** always installs the currently selected firmware variant.
+
 ## [WaterFlowKit V2 2.6.0] - 2026-04-14
 
 ### Added

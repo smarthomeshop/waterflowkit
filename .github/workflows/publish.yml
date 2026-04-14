@@ -18,6 +18,7 @@ on:
     branches:
       - main
     paths:
+      - "CHANGELOG.md"
       - ".github/workflows/**"
       - "waterflowkit-v1/**"
       - "waterflowkit-v2/**"
@@ -30,7 +31,7 @@ jobs:
     name: Validate changelog updates
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -91,7 +92,7 @@ jobs:
       v1_version: ${{ steps.versions.outputs.v1_version }}
       v2_version: ${{ steps.versions.outputs.v2_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -391,7 +392,7 @@ jobs:
       )
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Create output directory
         run: mkdir -p output
@@ -519,7 +520,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Create releases for changed hardware versions
         shell: bash

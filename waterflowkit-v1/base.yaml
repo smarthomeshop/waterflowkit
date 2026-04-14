@@ -237,6 +237,8 @@ button:
     on_press:
       then:
         - script.execute: sync_selected_firmware_source
+        - lambda: |-
+            ESP_LOGI("main", "Refreshing OTA metadata before installing selected firmware");
         - update.check:
             id: firmware_update
         - update.perform:
