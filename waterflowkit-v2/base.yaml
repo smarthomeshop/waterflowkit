@@ -378,6 +378,8 @@ button:
             ESP_LOGI("main", "Refreshing OTA metadata before installing selected firmware variant");
         - update.check:
             id: firmware_update
+        - lambda: |-
+            ESP_LOGI("main", "Starting OTA install for selected firmware variant");
         - update.perform:
             id: firmware_update
             force_update: true

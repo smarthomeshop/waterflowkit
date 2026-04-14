@@ -17,6 +17,7 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 ### Changed
 
 - Improved the **Firmware Update** button presentation and logging for clearer manual update feedback in Home Assistant and device logs.
+- Added an extra pre-install log step so manual firmware switching is easier to trace when diagnosing OTA behavior.
 
 ## [WaterFlowKit V1 1.8] - 2026-04-14
 
@@ -27,6 +28,7 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 ### Changed
 
 - Improved the **Firmware Update** button presentation and logging for clearer manual update feedback in Home Assistant and device logs.
+- Added an extra pre-install log step so manual firmware switching is easier to trace when diagnosing OTA behavior.
 
 ## [WaterFlowKit V2 2.6.0] - 2026-04-14
 
