@@ -8,7 +8,7 @@
       "chipFamily": "ESP32",
       "ota": {
         "path": "waterflowkit-v1-wifi-cloud/waterflowkit-esp32.ota.bin",
-        "md5": "b7c93f578e7ee223862b7ea9dce72e09"
+        "md5": "07de0a0b4642b466aa10f4b8efee791b"
       },
       "parts": [
         {
