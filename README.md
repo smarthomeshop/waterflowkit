@@ -80,11 +80,33 @@ Quick start guide: https://smarthomeshop.io/quick-start-waterflowkit
 
 ## Repository Layout
 
-- `waterflowkit-v1/` — ESPHome configurations for V1 (ESP32)
-- `waterflowkit-v2/` — ESPHome configurations for V2 (ESP32-C6)
-- `.github/workflows/` — build and publish automation for firmware and manifests
-- `CHANGELOG.md` — customer-facing firmware release notes
-- `gh-pages` branch — public firmware files and manifests
+```text
+waterflowkit/
+├── waterflowkit-v1/        # V1 ESPHome configurations
+│   ├── base.yaml           # Shared configuration
+│   ├── waterflowkit-wifi.yaml
+│   └── waterflowkit-wifi-cloud.yaml
+├── waterflowkit-v2/        # V2 ESPHome configurations
+│   ├── base.yaml
+│   ├── waterflowkit-wifi.yaml
+│   ├── waterflowkit-ethernet.yaml
+│   ├── waterflowkit-wifi-cloud.yaml
+│   └── waterflowkit-ethernet-cloud.yaml
+├── .github/workflows/      # Build and release automation
+├── CHANGELOG.md            # Customer-facing firmware notes
+└── images/
+```
+
+## Firmware Downloads
+
+Pre-built firmware manifests are published on the `gh-pages` branch.
+
+- V1 WiFi: `waterflowkit-v1-wifi-manifest.json`
+- V1 WiFi Cloud: `waterflowkit-v1-wifi-cloud-manifest.json`
+- V2 WiFi: `waterflowkit-v2-wifi-manifest.json`
+- V2 Ethernet: `waterflowkit-v2-ethernet-manifest.json`
+- V2 WiFi Cloud: `waterflowkit-v2-wifi-cloud-manifest.json`
+- V2 Ethernet Cloud: `waterflowkit-v2-ethernet-cloud-manifest.json`
 
 ## Contributing
 
