@@ -2,93 +2,89 @@
 
 ![WaterFlowKit](images/waterflowkit-product-shop.png)
 
-WaterFlowKit is a water flow monitoring solution designed to track your water consumption in real-time. It supports dual flow sensors, water temperature sensing, and multiple connectivity options. It integrates seamlessly with Home Assistant via ESPHome and runs fully local (no cloud required).
+WaterFlowKit is an ESPHome-based water flow monitor for Home Assistant. It measures flow rate, total consumption, and water temperature from supported pulse-based flow sensors, with local operation and optional cloud-sync firmware variants.
 
-## How it works
+Product page: https://smarthomeshop.io/waterflowkit
 
-The WaterFlowKit connects to pulse-based water flow sensors (Hall effect) to measure water flow rate and total consumption. Each flow input also includes an NTC temperature sensor for water temperature monitoring. Compatible with popular YF-series flow sensors.
+## How It Works
 
-👉 **More information**: https://smarthomeshop.io/waterflowkit
+WaterFlowKit reads pulse signals from supported Hall-effect flow sensors and converts them into flow rate and total consumption. Each input can also use an NTC sensor for water temperature monitoring.
 
-## Key features
+## Key Features
 
-- **Dual flow monitoring**: Two independent flow sensor inputs with real-time flow rate (L/min) and total consumption (L).
-- **Water temperature**: NTC temperature sensors for both flow inputs.
-- **Environment sensing**: Temperature and humidity measurement (HDC1080).
-- **Multiple sensor support**: YF-B1/B7, YF-B5/B6, YF-B10, YF-DN40-S, YF-DN50-S with automatic calibration.
-- **Connectivity**: WiFi with captive portal fallback, Ethernet (V2), optional Cloud sync.
-- **Provisioning**: Improv BLE/Serial and captive portal for easy setup.
-- **Local only**: Works without cloud services (100% local); OTA supported via manifest on GitHub Pages.
+- Real-time flow rate and total water consumption
+- Water temperature support per flow input
+- Temperature and humidity sensing with HDC1080
+- Support for multiple YF-series flow sensors with calibration options
+- WiFi and Ethernet firmware depending on hardware version
+- Optional cloud-sync variants
+- Fully local operation by default
 
-## Hardware versions
+## Hardware Versions
 
-| Version | Chip | Connectivity | Flow Sensors |
-|---------|------|--------------|--------------|
-| V1 | ESP32 | WiFi | 2x |
-| V2 | ESP32-C6 | WiFi + Ethernet | 4x |
+| Version | Chip | Connectivity | Flow Inputs |
+|---------|------|--------------|-------------|
+| V1 | ESP32 | WiFi | 2 |
+| V2 | ESP32-C6 | WiFi and Ethernet | 4 |
 
 ## Variants
 
-We publish firmware variants for two hardware versions. Each variant is a dedicated YAML in the version folder and ships with a matching Web Tools manifest on the `gh-pages` branch.
+We publish firmware for two hardware revisions. Each customer-facing variant has its own YAML file and matching Web Tools manifest.
 
 | Hardware | Variant | Description |
 |----------|---------|-------------|
 | V1 (ESP32) | WiFi | Standard WiFi connectivity |
-| V1 (ESP32) | WiFi Cloud | WiFi with Cloud sync |
-| V2 (ESP32-C6) | WiFi | WiFi with Improv BLE/Serial |
+| V1 (ESP32) | WiFi Cloud | WiFi with cloud sync |
+| V2 (ESP32-C6) | WiFi | WiFi with Improv BLE and Improv Serial |
 | V2 (ESP32-C6) | Ethernet | Wired Ethernet connectivity |
-| V2 (ESP32-C6) | WiFi Cloud | WiFi with Cloud sync |
-| V2 (ESP32-C6) | Ethernet Cloud | Ethernet with Cloud sync |
+| V2 (ESP32-C6) | WiFi Cloud | WiFi with cloud sync |
+| V2 (ESP32-C6) | Ethernet Cloud | Ethernet with cloud sync |
 
-## Supported flow sensors
+## Supported Flow Sensors
 
-The WaterFlowKit supports multiple flow sensor types with automatic calibration:
-
-| Sensor Model | Pulses/Liter | Typical Use |
-|--------------|--------------|-------------|
-| YF-B1 / YF-B7 | ~660 | Small pipes (1/2") |
-| YF-B5 / YF-B6 | ~396 | Medium pipes (3/4") |
-| YF-B10 | ~450 | General purpose |
-| YF-DN40-S | ~27 | Large pipes (DN40) |
-| YF-DN50-S | ~12 | Large pipes (DN50) |
-
-## Getting started
-
-1. **Hardware**: Connect power via USB-C.
-2. **Flash firmware**:
-   - Use our web-based flash tool at https://smarthomeshop.io/firmware to flash or re-flash your kit.
-   - Or compile/flash locally with ESPHome CLI.
-3. **Onboarding**:
-   - Connect to the `waterflowkit` hotspot if WiFi is not configured.
-   - Use Improv BLE or Improv Serial for provisioning.
-4. **Configure**: Select your flow sensor type in Home Assistant.
-5. **Calibrate**: Fine-tune with the Calibration % setting if needed.
-
-Please check for full documentation our quick start guide: https://smarthomeshop.io/quick-start-waterflowkit
-
-## Version history
-
-- Customer-facing release notes: [CHANGELOG.md](CHANGELOG.md)
-- GitHub Releases: https://github.com/smarthomeshop/waterflowkit/releases
-
-## Repository layout
-
-- `waterflowkit-v1/` — ESPHome configurations for V1 (ESP32)
-- `waterflowkit-v2/` — ESPHome configurations for V2 (ESP32-C6)
-- `.github/workflows/` — CI to build and publish firmware to `gh-pages`
-- `gh-pages` branch — public firmware and manifests (for OTA and ESP Web Tools)
+| Sensor Model | Pulses per Liter | Typical Use |
+|--------------|------------------|-------------|
+| YF-B1 / YF-B7 | About 660 | Small pipes (1/2") |
+| YF-B5 / YF-B6 | About 396 | Medium pipes (3/4") |
+| YF-B10 | About 450 | General purpose |
+| YF-DN40-S | About 27 | Large pipes (DN40) |
+| YF-DN50-S | About 12 | Large pipes (DN50) |
 
 ## Sensors
 
 | Sensor | Description |
 |--------|-------------|
-| Flow1/Flow2 Current Usage | Water flow rate in L/min |
-| Flow1/Flow2 Total Consumption | Cumulative water usage in L |
-| Flow1/Flow2 Water Temperature | Water temperature in °C |
-| Temperature | Environment temperature (°C) |
-| Humidity | Environment humidity (%) |
+| Flow1/Flow2 Current Usage | Flow rate in liters per minute |
+| Flow1/Flow2 Total Consumption | Cumulative water usage |
+| Flow1/Flow2 Water Temperature | Water temperature |
+| Temperature | Environment temperature |
+| Humidity | Environment humidity |
 | WiFi Signal | WiFi signal strength |
 | Uptime | Device uptime |
+
+## Getting Started
+
+1. Connect power and wire the flow sensors.
+2. Flash the desired firmware with the web flasher or ESPHome CLI.
+3. If WiFi is not configured yet, connect to the fallback hotspot.
+4. Use Improv BLE or Improv Serial where supported.
+5. Select the flow sensor type in Home Assistant and calibrate if needed.
+
+Web flasher: https://smarthomeshop.io/firmware
+Quick start guide: https://smarthomeshop.io/quick-start-waterflowkit
+
+## Version History
+
+- Customer-facing release notes: [CHANGELOG.md](CHANGELOG.md)
+- GitHub Releases: https://github.com/smarthomeshop/waterflowkit/releases
+
+## Repository Layout
+
+- `waterflowkit-v1/` — ESPHome configurations for V1 (ESP32)
+- `waterflowkit-v2/` — ESPHome configurations for V2 (ESP32-C6)
+- `.github/workflows/` — build and publish automation for firmware and manifests
+- `CHANGELOG.md` — customer-facing firmware release notes
+- `gh-pages` branch — public firmware files and manifests
 
 ## Contributing
 
@@ -98,10 +94,10 @@ PRs and issues are welcome. Please keep changes modular and follow ESPHome best 
 
 - Product info and guides: https://smarthomeshop.io/waterflowkit
 - Store: https://smarthomeshop.io
-- Community & support (Discord): https://smarthomeshop.io/discord
+- Community and support: https://smarthomeshop.io/discord
 
 ## License
 
-This project is released under the CC BY‑NC 4.0 license
+This project is released under the CC BY-NC 4.0 license.
 
 ![WaterFlowKit](images/waterflowkit-whatsinthebox-shop.png)
