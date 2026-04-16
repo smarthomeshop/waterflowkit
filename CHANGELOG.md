@@ -7,6 +7,7 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 ## [Unreleased]
 
 - Add customer-facing firmware notes here before merging a PR.
+- Improved WaterFlowKit onboarding and adoption defaults so the public ESPHome configurations are easier to take control of through Made for ESPHome compatible flows.
 
 ## [WaterFlowKit V2 2.7.0] - 2026-04-14
 

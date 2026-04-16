@@ -1,14 +1,8 @@
 # WaterFlowKit V1 - WiFi Network Configuration
 
 wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-  fast_connect: true
-  
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
   ap:
     ssid: ${device_name}
-    password: ${device_name}
 
 captive_portal:
 
@@ -39,6 +33,7 @@ text_sensor:
       id: wifi_ssid
       name: "${friendly_name} Connected SSID"
     bssid:
+      id: wifi_bssid
       name: "${friendly_name} Connected BSSID"
     mac_address:
       id: wifi_mac_address

@@ -2,16 +2,8 @@
 # ESP32-C6 with esp-idf framework
 
 wifi:
-  # No WiFi credentials - device starts in AP mode for initial setup
-  # Users can configure WiFi via:
-  # - Captive Portal (connect to hotspot)
-  # - Improv BLE (via Bluetooth)
-  # - Improv Serial (via USB)
-  # - ESPHome dashboard (after adoption)
-  
   ap:
     ssid: ${device_name}
-    password: ${device_name}
 
 captive_portal:
 
@@ -71,6 +63,7 @@ text_sensor:
       id: wifi_ssid
       name: "${friendly_name} Connected SSID"
     bssid:
+      id: wifi_bssid
       name: "${friendly_name} Connected BSSID"
     mac_address:
       id: wifi_mac_address
