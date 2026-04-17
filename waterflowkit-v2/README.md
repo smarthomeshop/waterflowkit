@@ -43,10 +43,10 @@ You can select your sensor type in Home Assistant and fine-tune calibration with
 
 ## Firmware Variants
 
-- `waterflowkit-wifi.yaml` - WiFi version (Home Assistant integration)
-- `waterflowkit-ethernet.yaml` - Ethernet version (Home Assistant integration)
-- `waterflowkit-wifi-cloud.yaml` - WiFi version with Cloud sync (works without Home Assistant)
-- `waterflowkit-ethernet-cloud.yaml` - Ethernet version with Cloud sync (works without Home Assistant)
+- `waterflowkit-wifi.yaml` - WiFi (local) version for Home Assistant based setups
+- `waterflowkit-ethernet.yaml` - Ethernet (local) version for Home Assistant based setups
+- `waterflowkit-wifi-cloud.yaml` - WiFi + SmartHomeShop App (cloud) version for cloud sync setups
+- `waterflowkit-ethernet-cloud.yaml` - Ethernet + SmartHomeShop App (cloud) version for cloud sync setups
 
 ## Installation
 
@@ -56,25 +56,25 @@ Go to [https://smarthomeshop.github.io/waterflowkit/](https://smarthomeshop.gith
 
 ### Via ESPHome Dashboard
 
-**WiFi:**
+**WiFi (local):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-wifi.yaml@main
 ```
 
-**Ethernet:**
+**Ethernet (local):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-ethernet.yaml@main
 ```
 
-**WiFi Cloud:**
+**WiFi + SmartHomeShop App (cloud):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-wifi-cloud.yaml@main
 ```
 
-**Ethernet Cloud:**
+**Ethernet + SmartHomeShop App (cloud):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-ethernet-cloud.yaml@main
@@ -86,5 +86,5 @@ After installation, you can configure the following settings in Home Assistant:
 
 - **Flow1/Flow2 Sensor Type** - Select your connected flow sensor model
 - **Flow1/Flow2 Calibration %** - Fine-tune calibration (100% = default, adjust based on measured vs actual flow)
-- **Firmware Type** - Choose the target firmware variant (WiFi, Ethernet, WiFi Cloud, or Ethernet Cloud)
+- **Firmware Type** - Choose the target firmware variant (WiFi (local), Ethernet (local), WiFi + SmartHomeShop App (cloud), or Ethernet + SmartHomeShop App (cloud))
 - **Firmware Update** - Press this button in Home Assistant to install the selected firmware variant

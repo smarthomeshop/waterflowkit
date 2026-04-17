@@ -1,8 +1,8 @@
-# WaterFlowKit V2 WiFi Cloud Configuration
+# WaterFlowKit V2 WiFi + SmartHomeShop App (cloud) Configuration
 # Main entry point for WiFi firmware with cloud sync enabled
 
 substitutions:
-  default_network: "WiFi Cloud"
+  default_network: "WiFi + SmartHomeShop App (cloud)"
 
 packages:
   base: !include base.yaml

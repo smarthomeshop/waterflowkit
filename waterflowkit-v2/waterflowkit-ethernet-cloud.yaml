@@ -1,8 +1,8 @@
-# WaterFlowKit V2 Ethernet Cloud Configuration
+# WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud) Configuration
 # Main entry point for Ethernet firmware with cloud sync enabled
 
 substitutions:
-  default_network: "Ethernet Cloud"
+  default_network: "Ethernet + SmartHomeShop App (cloud)"
 
 packages:
   base: !include base.yaml

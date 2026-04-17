@@ -33,12 +33,12 @@ We publish firmware for two hardware revisions. Each customer-facing variant has
 
 | Hardware | Variant | Description |
 |----------|---------|-------------|
-| V1 (ESP32) | WiFi | Standard WiFi connectivity |
-| V1 (ESP32) | WiFi Cloud | WiFi with cloud sync |
-| V2 (ESP32-C6) | WiFi | WiFi with Improv BLE and Improv Serial |
-| V2 (ESP32-C6) | Ethernet | Wired Ethernet connectivity |
-| V2 (ESP32-C6) | WiFi Cloud | WiFi with cloud sync |
-| V2 (ESP32-C6) | Ethernet Cloud | Ethernet with cloud sync |
+| V1 (ESP32) | WiFi (local) | Standard local WiFi connectivity |
+| V1 (ESP32) | WiFi + SmartHomeShop App (cloud) | WiFi with SmartHomeShop App cloud sync |
+| V2 (ESP32-C6) | WiFi (local) | Local WiFi with Improv BLE and Improv Serial |
+| V2 (ESP32-C6) | Ethernet (local) | Standard wired local connectivity |
+| V2 (ESP32-C6) | WiFi + SmartHomeShop App (cloud) | WiFi with SmartHomeShop App cloud sync |
+| V2 (ESP32-C6) | Ethernet + SmartHomeShop App (cloud) | Ethernet with SmartHomeShop App cloud sync |
 
 ## Supported Flow Sensors
 
@@ -101,12 +101,12 @@ waterflowkit/
 
 Pre-built firmware manifests are published on the `gh-pages` branch.
 
-- V1 WiFi: `waterflowkit-v1-wifi-manifest.json`
-- V1 WiFi Cloud: `waterflowkit-v1-wifi-cloud-manifest.json`
-- V2 WiFi: `waterflowkit-v2-wifi-manifest.json`
-- V2 Ethernet: `waterflowkit-v2-ethernet-manifest.json`
-- V2 WiFi Cloud: `waterflowkit-v2-wifi-cloud-manifest.json`
-- V2 Ethernet Cloud: `waterflowkit-v2-ethernet-cloud-manifest.json`
+- V1 WiFi (local): `waterflowkit-v1-wifi-manifest.json`
+- V1 WiFi + SmartHomeShop App (cloud): `waterflowkit-v1-wifi-cloud-manifest.json`
+- V2 WiFi (local): `waterflowkit-v2-wifi-manifest.json`
+- V2 Ethernet (local): `waterflowkit-v2-ethernet-manifest.json`
+- V2 WiFi + SmartHomeShop App (cloud): `waterflowkit-v2-wifi-cloud-manifest.json`
+- V2 Ethernet + SmartHomeShop App (cloud): `waterflowkit-v2-ethernet-cloud-manifest.json`
 
 ## Contributing
 

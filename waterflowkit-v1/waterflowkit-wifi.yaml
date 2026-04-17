@@ -2,7 +2,7 @@
 # Main entry point for WiFi firmware
 
 substitutions:
-  default_network: "WiFi"
+  default_network: "WiFi (local)"
 
 packages:
   base: !include base.yaml

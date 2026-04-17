@@ -43,8 +43,8 @@ You can select your sensor type in Home Assistant and fine-tune calibration with
 
 ## Firmware Variants
 
-- `waterflowkit-wifi.yaml` - WiFi version (Home Assistant integration)
-- `waterflowkit-wifi-cloud.yaml` - WiFi version with Cloud sync (works without Home Assistant)
+- `waterflowkit-wifi.yaml` - WiFi (local) version for Home Assistant based setups
+- `waterflowkit-wifi-cloud.yaml` - WiFi + SmartHomeShop App (cloud) version for cloud sync setups
 
 ## Installation
 
@@ -54,13 +54,13 @@ Go to [https://smarthomeshop.github.io/waterflowkit/](https://smarthomeshop.gith
 
 ### Via ESPHome Dashboard
 
-**WiFi:**
+**WiFi (local):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v1/waterflowkit-wifi.yaml@main
 ```
 
-**WiFi Cloud:**
+**WiFi + SmartHomeShop App (cloud):**
 ```yaml
 packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v1/waterflowkit-wifi-cloud.yaml@main
@@ -72,5 +72,5 @@ After installation, you can configure the following settings in Home Assistant:
 
 - **Flow1/Flow2 Sensor Type** - Select your connected flow sensor model
 - **Flow1/Flow2 Calibration %** - Fine-tune calibration (100% = default, adjust based on measured vs actual flow)
-- **Firmware Type** - Choose the target firmware variant (WiFi or WiFi Cloud)
+- **Firmware Type** - Choose the target firmware variant (WiFi (local) or WiFi + SmartHomeShop App (cloud))
 - **Firmware Update** - Press this button in Home Assistant to install the selected firmware variant

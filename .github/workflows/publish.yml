@@ -238,6 +238,71 @@ jobs:
         run: |
           set -euo pipefail
 
+          finalize_changelog() {
+            local unreleased_notes
+            local release_blocks
+            local release_date
+
+            unreleased_notes=$(mktemp)
+            release_blocks=$(mktemp)
+            release_date=$(TZ=Europe/Amsterdam date +%Y-%m-%d)
+
+            awk '
+              $0 == "## [Unreleased]" { found=1; next }
+              found && /^## \[/ { exit }
+              found { print }
+            ' CHANGELOG.md \
+              | sed '/^- Add customer-facing firmware notes here before merging a PR\.$/d' \
+              > "$unreleased_notes"
+
+            if ! grep -q '[^[:space:]]' "$unreleased_notes"; then
+              echo "No unreleased changelog notes to finalize"
+              rm -f "$unreleased_notes" "$release_blocks"
+              return
+            fi
+
+            if [[ "${{ steps.changes.outputs.v1 }}" == "true" ]]; then
+              {
+                printf '## [WaterFlowKit V1 %s] - %s\n\n' "${{ steps.versions.outputs.v1_version }}" "$release_date"
+                cat "$unreleased_notes"
+                printf '\n'
+              } >> "$release_blocks"
+            fi
+
+            if [[ "${{ steps.changes.outputs.v2 }}" == "true" ]]; then
+              {
+                printf '## [WaterFlowKit V2 %s] - %s\n\n' "${{ steps.versions.outputs.v2_version }}" "$release_date"
+                cat "$unreleased_notes"
+                printf '\n'
+              } >> "$release_blocks"
+            fi
+
+            awk -v blocks_file="$release_blocks" '
+              BEGIN { in_unreleased=0 }
+              $0 == "## [Unreleased]" {
+                print
+                print ""
+                print "- Add customer-facing firmware notes here before merging a PR."
+                print ""
+                while ((getline line < blocks_file) > 0) {
+                  print line
+                }
+                in_unreleased=1
+                next
+              }
+              in_unreleased && /^## \[/ {
+                in_unreleased=0
+                print
+                next
+              }
+              in_unreleased { next }
+              { print }
+            ' CHANGELOG.md > CHANGELOG.md.tmp
+
+            mv CHANGELOG.md.tmp CHANGELOG.md
+            rm -f "$unreleased_notes" "$release_blocks"
+          }
+
           create_tag() {
             local tag_name=$1
 
@@ -263,10 +328,14 @@ jobs:
             changes_made=true
           fi
 
+          if [[ "$changes_made" == "true" ]]; then
+            finalize_changelog
+          fi
+
           if [[ "$changes_made" == "true" ]] && ! git diff --quiet; then
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add waterflowkit-v*/base.yaml
+            git add CHANGELOG.md waterflowkit-v*/base.yaml
 
             msg="chore: update versions"
             [[ "${{ steps.changes.outputs.v1 }}" == "true" ]] && msg="$msg V1=${{ steps.versions.outputs.v1_version }}"
@@ -300,13 +369,13 @@ jobs:
       base_path: waterflowkit-v1
 
   build-v1-wifi-cloud:
-    name: Build WaterFlowKit V1 WiFi Cloud
+    name: Build WaterFlowKit V1 WiFi + SmartHomeShop App (cloud)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v1_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v1/waterflowkit-wifi-cloud.yaml
-      name: WaterFlowKit V1 WiFi Cloud
+      name: WaterFlowKit V1 WiFi + SmartHomeShop App (cloud)
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v1-wifi-cloud
@@ -328,13 +397,13 @@ jobs:
       base_path: waterflowkit-v2
 
   build-v2-wifi-cloud:
-    name: Build WaterFlowKit V2 WiFi Cloud
+    name: Build WaterFlowKit V2 WiFi + SmartHomeShop App (cloud)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-wifi-cloud.yaml
-      name: WaterFlowKit V2 WiFi Cloud
+      name: WaterFlowKit V2 WiFi + SmartHomeShop App (cloud)
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-wifi-cloud
@@ -356,13 +425,13 @@ jobs:
       base_path: waterflowkit-v2
 
   build-v2-ethernet-cloud:
-    name: Build WaterFlowKit V2 Ethernet Cloud
+    name: Build WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)
     needs: [detect-changes]
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
       files: waterflowkit-v2/waterflowkit-ethernet-cloud.yaml
-      name: WaterFlowKit V2 Ethernet Cloud
+      name: WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)
       clean: false
       esphome_version: latest
       directory_name: waterflowkit-v2-ethernet-cloud
@@ -405,11 +474,11 @@ jobs:
           name: WaterFlowKit V1 WiFi
           path: output
 
-      - name: Download V1 WiFi Cloud artifact
+      - name: Download V1 WiFi + SmartHomeShop App (cloud) artifact
         if: needs.build-v1-wifi-cloud.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: WaterFlowKit V1 WiFi Cloud
+          name: WaterFlowKit V1 WiFi + SmartHomeShop App (cloud)
           path: output
 
       - name: Download V2 WiFi artifact
@@ -419,11 +488,11 @@ jobs:
           name: WaterFlowKit V2 WiFi
           path: output
 
-      - name: Download V2 WiFi Cloud artifact
+      - name: Download V2 WiFi + SmartHomeShop App (cloud) artifact
         if: needs.build-v2-wifi-cloud.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: WaterFlowKit V2 WiFi Cloud
+          name: WaterFlowKit V2 WiFi + SmartHomeShop App (cloud)
           path: output
 
       - name: Download V2 Ethernet artifact
@@ -433,11 +502,11 @@ jobs:
           name: WaterFlowKit V2 Ethernet
           path: output
 
-      - name: Download V2 Ethernet Cloud artifact
+      - name: Download V2 Ethernet + SmartHomeShop App (cloud) artifact
         if: needs.build-v2-ethernet-cloud.result == 'success'
         uses: actions/download-artifact@v4
         with:
-          name: WaterFlowKit V2 Ethernet Cloud
+          name: WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)
           path: output
 
       - name: Create manifests
@@ -470,11 +539,11 @@ jobs:
           }
 
           create_manifest "waterflowkit-v1-wifi" "waterflowkit-v1-wifi-manifest.json" "WaterFlowKit V1 WiFi" "${{ needs.detect-changes.outputs.v1_version }}"
-          create_manifest "waterflowkit-v1-wifi-cloud" "waterflowkit-v1-wifi-cloud-manifest.json" "WaterFlowKit V1 WiFi Cloud" "${{ needs.detect-changes.outputs.v1_version }}"
+          create_manifest "waterflowkit-v1-wifi-cloud" "waterflowkit-v1-wifi-cloud-manifest.json" "WaterFlowKit V1 WiFi + SmartHomeShop App (cloud)" "${{ needs.detect-changes.outputs.v1_version }}"
           create_manifest "waterflowkit-v2-wifi" "waterflowkit-v2-wifi-manifest.json" "WaterFlowKit V2 WiFi" "${{ needs.detect-changes.outputs.v2_version }}"
-          create_manifest "waterflowkit-v2-wifi-cloud" "waterflowkit-v2-wifi-cloud-manifest.json" "WaterFlowKit V2 WiFi Cloud" "${{ needs.detect-changes.outputs.v2_version }}"
+          create_manifest "waterflowkit-v2-wifi-cloud" "waterflowkit-v2-wifi-cloud-manifest.json" "WaterFlowKit V2 WiFi + SmartHomeShop App (cloud)" "${{ needs.detect-changes.outputs.v2_version }}"
           create_manifest "waterflowkit-v2-ethernet" "waterflowkit-v2-ethernet-manifest.json" "WaterFlowKit V2 Ethernet" "${{ needs.detect-changes.outputs.v2_version }}"
-          create_manifest "waterflowkit-v2-ethernet-cloud" "waterflowkit-v2-ethernet-cloud-manifest.json" "WaterFlowKit V2 Ethernet Cloud" "${{ needs.detect-changes.outputs.v2_version }}"
+          create_manifest "waterflowkit-v2-ethernet-cloud" "waterflowkit-v2-ethernet-cloud-manifest.json" "WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)" "${{ needs.detect-changes.outputs.v2_version }}"
 
       - name: Create README for gh-pages
         shell: bash
@@ -522,6 +591,9 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Create releases for changed hardware versions
         shell: bash
@@ -543,6 +615,14 @@ jobs:
               found && /^## \[/ { exit }
               found { print }
             ' CHANGELOG.md > release-notes.txt
+
+            if [[ ! -s release-notes.txt ]]; then
+              awk '
+                $0 == "## [Unreleased]" { found=1; next }
+                found && /^## \[/ { exit }
+                found { print }
+              ' CHANGELOG.md > release-notes.txt
+            fi
 
             if [[ ! -s release-notes.txt ]]; then
               printf '%s\n\n%s\n' \

@@ -16,7 +16,7 @@ substitutions:
   ethernet_cloud_manifest_url: "https://smarthomeshop.github.io/waterflowkit/waterflowkit-v2-ethernet-cloud-manifest.json"
   
   # Default values (can be overridden)
-  default_network: "WiFi"
+  default_network: "WiFi (local)"
   cloud_enabled: "false"
 
 esphome:
@@ -76,17 +76,17 @@ script:
     then:
       - lambda: |-
           std::string option = id(firmware_selector).current_option();
-          if (option == "Ethernet") {
-            ESP_LOGI("main", "OTA updates set to use Ethernet firmware");
+          if (option == "Ethernet (local)" || option == "Ethernet") {
+            ESP_LOGI("main", "OTA updates set to use Ethernet local firmware");
             id(firmware_update).set_source_url("${ethernet_manifest_url}");
-          } else if (option == "WiFi Cloud") {
-            ESP_LOGI("main", "OTA updates set to use WiFi Cloud firmware");
+          } else if (option == "WiFi + SmartHomeShop App (cloud)" || option == "WiFi Cloud") {
+            ESP_LOGI("main", "OTA updates set to use WiFi cloud firmware");
             id(firmware_update).set_source_url("${wifi_cloud_manifest_url}");
-          } else if (option == "Ethernet Cloud") {
-            ESP_LOGI("main", "OTA updates set to use Ethernet Cloud firmware");
+          } else if (option == "Ethernet + SmartHomeShop App (cloud)" || option == "Ethernet Cloud") {
+            ESP_LOGI("main", "OTA updates set to use Ethernet cloud firmware");
             id(firmware_update).set_source_url("${ethernet_cloud_manifest_url}");
           } else {
-            ESP_LOGI("main", "OTA updates set to use WiFi firmware");
+            ESP_LOGI("main", "OTA updates set to use WiFi local firmware");
             id(firmware_update).set_source_url("${wifi_manifest_url}");
           }
 
@@ -100,10 +100,10 @@ select:
     optimistic: true
     restore_value: true
     options:
-      - "WiFi"
-      - "Ethernet"
-      - "WiFi Cloud"
-      - "Ethernet Cloud"
+      - "WiFi (local)"
+      - "Ethernet (local)"
+      - "WiFi + SmartHomeShop App (cloud)"
+      - "Ethernet + SmartHomeShop App (cloud)"
     initial_option: ${default_network}
     on_value:
       then:

@@ -3,7 +3,7 @@
 # ESP32-C6 with W5500 SPI Ethernet
 
 substitutions:
-  default_network: "Ethernet"
+  default_network: "Ethernet (local)"
 
 packages:
   base: !include base.yaml
