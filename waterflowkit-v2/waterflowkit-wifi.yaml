@@ -8,6 +8,7 @@ substitutions:
 packages:
   base: !include base.yaml
   wifi: !include wifi.yaml
+  diagnostics: !include diagnostics.yaml
 
 dashboard_import:
   package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-wifi.yaml@main

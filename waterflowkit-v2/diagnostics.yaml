@@ -1,0 +1,18 @@
+# WaterFlowKit V2 - Optional diagnostics package
+# Kept separate so source-based cloud adoption builds stay within flash limits.
+
+web_server:
+  port: 80
+
+debug:
+  update_interval: 15min
+
+text_sensor:
+  - platform: debug
+    device:
+      name: "${friendly_name} Device Info"
+      entity_category: diagnostic
+    reset_reason:
+      name: "${friendly_name} Reset Reason"
+      icon: mdi:anchor
+      entity_category: diagnostic

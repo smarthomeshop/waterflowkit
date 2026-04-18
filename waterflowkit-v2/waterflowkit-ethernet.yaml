@@ -8,6 +8,7 @@ substitutions:
 packages:
   base: !include base.yaml
   eth: !include eth.yaml
+  diagnostics: !include diagnostics.yaml
 
 dashboard_import:
   package_import_url: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-ethernet.yaml@main

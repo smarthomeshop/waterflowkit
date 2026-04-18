@@ -80,6 +80,8 @@ packages:
   waterflowkit: github://smarthomeshop/waterflowkit/waterflowkit-v2/waterflowkit-ethernet-cloud.yaml@main
 ```
 
+For source-based ESPHome adoption builds, the cloud variants intentionally skip the optional diagnostics web server package so they stay within ESP32-C6 flash limits.
+
 ## Configuration
 
 After installation, you can configure the following settings in Home Assistant:
