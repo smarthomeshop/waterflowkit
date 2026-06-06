@@ -10,9 +10,11 @@ debug:
 text_sensor:
   - platform: debug
     device:
+      id: text_sensor_debug_device_info
       name: "${friendly_name} Device Info"
       entity_category: diagnostic
     reset_reason:
+      id: text_sensor_debug_reset_reason
       name: "${friendly_name} Reset Reason"
       icon: mdi:anchor
       entity_category: diagnostic

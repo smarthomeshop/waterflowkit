@@ -227,6 +227,7 @@ switch:
 
 button:
   - platform: factory_reset
+    id: button_factory_reset
     name: "${friendly_name} Factory Reset"
     entity_category: config
     disabled_by_default: true
@@ -444,6 +445,7 @@ text_sensor:
       return {"${software_version}"};
       
   - platform: template
+    id: text_sensor_hardware_version
     name: "${friendly_name} Hardware Version"
     lambda: 'return {"${hardware_version}"};'
     update_interval: 5h

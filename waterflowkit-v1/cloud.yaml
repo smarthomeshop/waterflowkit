@@ -40,7 +40,7 @@ substitutions:
   # Cloud enabled flag (overrides base.yaml default)
   cloud_enabled: "true"
   # Cloud API configuration
-  cloud_api_url: "https://app.smarthomeshop.io"
+  cloud_api_url: "https://api.smarthomeshop.io"
   cloud_api_version: "v1"
   # Smart sync intervals
   cloud_sync_interval_flow: "60s"

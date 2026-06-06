@@ -14,7 +14,7 @@ esp32_improv:
 
 # Improv Serial (for WiFi provisioning via USB)
 improv_serial:
-  next_url: "https://app.smarthomeshop.io/setup/welcome?device={{device_name}}&ip={{ip_address}}&cloud=${cloud_enabled}&hw=${hardware_version}"
+  next_url: "https://api.smarthomeshop.io/setup/welcome?device={{device_name}}&ip={{ip_address}}&cloud=${cloud_enabled}&hw=${hardware_version}"
 
 # BLE disable switch - saves RAM after WiFi is connected
 switch:

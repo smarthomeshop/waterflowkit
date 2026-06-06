@@ -15,4 +15,5 @@ ESPHOME-PROJECT-GUIDE.md
 waterflowkit-v1/waterflowkit-wifi-test-all-in-one.yaml
 waterflowkit-v2/waterflowkit-ethernet-test.yaml
 waterflowkit-v2/waterflowkit-wifi-test.yaml
+waterflowkit-v2/waterflowkit-local-test.yaml
 .DS_Store
