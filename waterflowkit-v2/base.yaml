@@ -38,6 +38,11 @@ esp32:
   variant: esp32c6
   framework:
     type: esp-idf
+    # Flash size trims: improv BLE only needs legacy (4.2) advertising and a
+    # GATT server, so the BLE 5.0 feature set is unused weight (~39KB).
+    sdkconfig_options:
+      CONFIG_BT_BLE_50_FEATURES_SUPPORTED: n
+      CONFIG_ESP_ERR_TO_NAME_LOOKUP: n
 
 # === Core Components ===
 logger:

@@ -44,6 +44,8 @@ substitutions:
   cloud_api_version: "v1"
   # Smart sync intervals
   cloud_sync_interval_flow: "60s"
+  cloud_active_sync_interval_flow: "10s"
+  cloud_active_flow_threshold_ppm: "0"
   cloud_sync_interval_totals: "5min"
   cloud_sync_interval_environment: "5min"
 
@@ -177,6 +179,11 @@ globals:
     initial_value: "false"
 
   - id: flow2_was_active
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+  - id: cloud_live_flow_was_active
     type: bool
     restore_value: false
     initial_value: "false"
@@ -574,6 +581,35 @@ script:
       - script.execute: cloud_detect_water_events
 
   # ============================================
+  # Active Flow Sync (every 10 sec while flowing)
+  # Sends current RAW pulse rate for live app updates.
+  # Also sends one zero update when flow stops.
+  # ============================================
+  - id: cloud_sync_active_flow
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: |-
+              const uint32_t flow1 = id(flow1_raw_pulse_rate).has_state() ? (uint32_t) id(flow1_raw_pulse_rate).state : 0;
+              const uint32_t flow2 = id(flow2_raw_pulse_rate).has_state() ? (uint32_t) id(flow2_raw_pulse_rate).state : 0;
+              const bool active = flow1 > ${cloud_active_flow_threshold_ppm} || flow2 > ${cloud_active_flow_threshold_ppm};
+
+              if (!active && !id(cloud_live_flow_was_active)) {
+                return false;
+              }
+
+              id(avg_flow1_ppm) = flow1;
+              id(avg_flow2_ppm) = flow2;
+              id(pending_flow_data) = true;
+              id(pending_totals_data) = true;
+              id(cloud_live_flow_was_active) = active;
+
+              return true;
+          then:
+            - script.execute: cloud_send_batch
+
+  # ============================================
   # Flow Sync (every 60 sec - average)
   # Sends RAW pulses per minute average to cloud
   # ============================================
@@ -869,6 +905,7 @@ script:
           id(flow1_ppm_sum) = 0;
           id(flow2_ppm_sum) = 0;
           id(flow_sample_count) = 0;
+          id(cloud_live_flow_was_active) = false;
       - logger.log:
           level: INFO
           format: "Cloud registration reset complete"
@@ -879,10 +916,11 @@ script:
 # INTERVALS (Smart Cloud Sync)
 # ====================
 interval:
-  # Flow sample collection every 10 seconds (for 60s average)
-  - interval: 10s
+  # Flow sample collection + active live sync every 10 seconds
+  - interval: ${cloud_active_sync_interval_flow}
     then:
       - script.execute: cloud_collect_flow_sample
+      - script.execute: cloud_sync_active_flow
 
   # Flow sync every 60 seconds (sends average)
   - interval: ${cloud_sync_interval_flow}

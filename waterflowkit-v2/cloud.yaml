@@ -39,6 +39,8 @@ substitutions:
   cloud_api_version: "v1"
   # Smart sync intervals
   cloud_sync_interval_flow: "60s"
+  cloud_active_sync_interval_flow: "10s"
+  cloud_active_flow_threshold_ppm: "0"
   cloud_sync_interval_totals: "5min"
   cloud_sync_interval_environment: "5min"
 
@@ -168,6 +170,11 @@ globals:
     type: uint32_t
     restore_value: false
     initial_value: "0"
+
+  - id: cloud_live_flow_was_active
+    type: bool
+    restore_value: false
+    initial_value: "false"
 
   # === Batch Buffer - Pending data flags ===
   - id: pending_flow_data
@@ -533,6 +540,42 @@ script:
           ESP_LOGV("cloud", "Flow sample %d collected (raw pulses)", id(flow_sample_count));
 
   # ============================================
+  # Active Flow Sync (every 10 sec while flowing)
+  # Sends current RAW pulse rate for live app updates.
+  # Also sends one zero update when flow stops.
+  # ============================================
+  - id: cloud_sync_active_flow
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: |-
+              const uint32_t flow1 = id(flow1_raw_pulse_rate).has_state() ? (uint32_t) id(flow1_raw_pulse_rate).state : 0;
+              const uint32_t flow2 = id(flow2_raw_pulse_rate).has_state() ? (uint32_t) id(flow2_raw_pulse_rate).state : 0;
+              const uint32_t flow3 = id(flow3_raw_pulse_rate).has_state() ? (uint32_t) id(flow3_raw_pulse_rate).state : 0;
+              const uint32_t flow4 = id(flow4_raw_pulse_rate).has_state() ? (uint32_t) id(flow4_raw_pulse_rate).state : 0;
+              const bool active = flow1 > ${cloud_active_flow_threshold_ppm}
+                || flow2 > ${cloud_active_flow_threshold_ppm}
+                || flow3 > ${cloud_active_flow_threshold_ppm}
+                || flow4 > ${cloud_active_flow_threshold_ppm};
+
+              if (!active && !id(cloud_live_flow_was_active)) {
+                return false;
+              }
+
+              id(avg_flow1_ppm) = flow1;
+              id(avg_flow2_ppm) = flow2;
+              id(avg_flow3_ppm) = flow3;
+              id(avg_flow4_ppm) = flow4;
+              id(pending_flow_data) = true;
+              id(pending_totals_data) = true;
+              id(cloud_live_flow_was_active) = active;
+
+              return true;
+          then:
+            - script.execute: cloud_send_batch
+
+  # ============================================
   # Flow Sync (every 60 sec - average)
   # Sends RAW pulses per minute average to cloud
   # ============================================
@@ -831,6 +874,7 @@ script:
           id(flow3_ppm_sum) = 0;
           id(flow4_ppm_sum) = 0;
           id(flow_sample_count) = 0;
+          id(cloud_live_flow_was_active) = false;
       - logger.log:
           level: INFO
           format: "Cloud registration reset complete"
@@ -840,11 +884,40 @@ script:
 # ====================
 # INTERVALS (Smart Cloud Sync)
 # ====================
+# Cloud firmware status LED: the built-in status_led keeps blinking on the
+# ESPHome API "waiting for client connection" warning, which is the normal
+# state for cloud-only customers without Home Assistant. Replace it with
+# connectivity behaviour: blink while offline or not set up, off once online.
+status_led: !remove
+
+output:
+  - platform: gpio
+    pin: GPIO22  # same pin the removed status_led used
+    id: cloud_status_led_output
+
 interval:
-  # Flow sample collection every 10 seconds (for 60s average)
-  - interval: 10s
+  - interval: 500ms
+    then:
+      - lambda: |-
+          static bool cloud_led_on = false;
+          if (network::is_connected()) {
+            if (cloud_led_on) {
+              id(cloud_status_led_output).turn_off();
+              cloud_led_on = false;
+            }
+          } else {
+            cloud_led_on = !cloud_led_on;
+            if (cloud_led_on) {
+              id(cloud_status_led_output).turn_on();
+            } else {
+              id(cloud_status_led_output).turn_off();
+            }
+          }
+  # Flow sample collection + active live sync every 10 seconds
+  - interval: ${cloud_active_sync_interval_flow}
     then:
       - script.execute: cloud_collect_flow_sample
+      - script.execute: cloud_sync_active_flow
 
   # Flow sync every 60 seconds (sends average)
   - interval: ${cloud_sync_interval_flow}
