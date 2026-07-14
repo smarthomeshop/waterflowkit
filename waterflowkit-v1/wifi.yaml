@@ -3,6 +3,7 @@
 wifi:
   ap:
     ssid: ${device_name}
+    password: ${device_name}
 
 captive_portal:
 
