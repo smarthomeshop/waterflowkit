@@ -7,6 +7,8 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 ## [Unreleased]
 
 - Add customer-facing firmware notes here before merging a PR.
+- The fallback setup hotspot now uses the password "waterflowkit" instead of being an open network.
+- The setup portal now explains that choosing Ethernet installs the Ethernet firmware in the background and takes about two minutes before the network port works.
 
 ## [WaterFlowKit V1 1.10] - 2026-07-14
 
@@ -15,8 +17,6 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 - WaterFlowKit V2 WiFi firmware can now switch itself to the Ethernet firmware from the setup portal: pick Ethernet during setup and the device installs the matching Ethernet variant over WiFi, after which you plug in the network cable. Flashing over USB-C via smarthomeshop.io/firmware remains available.
 - Cloud firmware no longer blinks the status LED forever when the device is used without Home Assistant: the LED now blinks while offline and turns off once the device is connected.
 - Faster cloud flow sync while water is actively flowing on WaterFlowKit V1.
-- The fallback setup hotspot now uses the password "waterflowkit" instead of being an open network.
-- The setup portal now explains that choosing Ethernet installs the Ethernet firmware in the background and takes about two minutes before the network port works.
 
 
 ## [WaterFlowKit V2 2.10.0] - 2026-07-14
