@@ -7,10 +7,24 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 ## [Unreleased]
 
 - Add customer-facing firmware notes here before merging a PR.
+
+## [WaterFlowKit V1 1.10] - 2026-07-14
+
+
 - Added the branded SmartHomeShop setup portal to WaterFlowKit V1 and V2 WiFi and cloud firmware: connecting to the fallback hotspot now opens a SmartHomeShop setup page to pick your WiFi network, choose your firmware variant and see next steps for Home Assistant or SmartHomeShop Cloud.
 - WaterFlowKit V2 WiFi firmware can now switch itself to the Ethernet firmware from the setup portal: pick Ethernet during setup and the device installs the matching Ethernet variant over WiFi, after which you plug in the network cable. Flashing over USB-C via smarthomeshop.io/firmware remains available.
 - Cloud firmware no longer blinks the status LED forever when the device is used without Home Assistant: the LED now blinks while offline and turns off once the device is connected.
 - Faster cloud flow sync while water is actively flowing on WaterFlowKit V1.
+
+
+## [WaterFlowKit V2 2.10.0] - 2026-07-14
+
+
+- Added the branded SmartHomeShop setup portal to WaterFlowKit V1 and V2 WiFi and cloud firmware: connecting to the fallback hotspot now opens a SmartHomeShop setup page to pick your WiFi network, choose your firmware variant and see next steps for Home Assistant or SmartHomeShop Cloud.
+- WaterFlowKit V2 WiFi firmware can now switch itself to the Ethernet firmware from the setup portal: pick Ethernet during setup and the device installs the matching Ethernet variant over WiFi, after which you plug in the network cable. Flashing over USB-C via smarthomeshop.io/firmware remains available.
+- Cloud firmware no longer blinks the status LED forever when the device is used without Home Assistant: the LED now blinks while offline and turns off once the device is connected.
+- Faster cloud flow sync while water is actively flowing on WaterFlowKit V1.
+
 
 ## [WaterFlowKit V2 2.9.0] - 2026-04-18
 
