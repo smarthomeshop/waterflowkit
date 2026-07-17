@@ -1,6 +1,6 @@
 {
   "name": "WaterFlowKit V1 WiFi + SmartHomeShop App (cloud)",
-  "version": "1.11",
+  "version": "1.12",
   "home_assistant_domain": "esphome",
   "new_install_skip_erase": false,
   "builds": [
@@ -8,7 +8,7 @@
       "chipFamily": "ESP32",
       "ota": {
         "path": "waterflowkit-v1-wifi-cloud/waterflowkit-esp32.ota.bin",
-        "md5": "dff60b7ec3ac17fdc23690a65fadb36a"
+        "md5": "3726fe4292ee28057b338268c5a2f024"
       },
       "parts": [
         {
