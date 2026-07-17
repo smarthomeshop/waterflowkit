@@ -6,9 +6,21 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
+- Add customer-facing firmware notes here before merging a PR.
+
+## [WaterFlowKit V1 1.12] - 2026-07-17
+
+
 - Added a CPU temperature diagnostic sensor, also synced to SmartHomeShop Cloud, and updated the built-in web interface to version 3.
 
-- Add customer-facing firmware notes here before merging a PR.
+
+
+## [WaterFlowKit V2 2.12.0] - 2026-07-17
+
+
+- Added a CPU temperature diagnostic sensor, also synced to SmartHomeShop Cloud, and updated the built-in web interface to version 3.
+
+
 
 ## [WaterFlowKit V1 1.11] - 2026-07-17
 
