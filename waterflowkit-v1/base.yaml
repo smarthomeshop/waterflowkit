@@ -55,6 +55,7 @@ http_request:
 
 web_server:
   port: 80
+  version: 3
 
 # === Firmware Update Component ===
 update:
@@ -286,6 +287,13 @@ time:
 
 # === Sensors ===
 sensor:
+  # ESP32 internal temperature for owner diagnostics.
+  - platform: internal_temperature
+    id: cpu_temperature
+    name: "${friendly_name} CPU Temperature"
+    entity_category: diagnostic
+    update_interval: 60s
+
   # Uptime (internal)
   - platform: uptime
     id: sensor_uptime
