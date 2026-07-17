@@ -6,6 +6,8 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
+- Fixed cloud firmware restarting every 15 minutes when Home Assistant is not connected: the no-client reboot of the native API is now disabled on cloud firmware, so cloud-only setups run uninterrupted.
+
 - Add customer-facing firmware notes here before merging a PR.
 - The fallback setup hotspot now uses the password "waterflowkit" instead of being an open network.
 - The setup portal now explains that choosing Ethernet installs the Ethernet firmware in the background and takes about two minutes before the network port works.
