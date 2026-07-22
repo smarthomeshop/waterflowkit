@@ -6,6 +6,8 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
+- Refreshed the released firmware builds so the WiFi setup flows use the latest SmartHomeShop setup portal package.
+
 - Add customer-facing firmware notes here before merging a PR.
 
 ## [WaterFlowKit V1 1.12] - 2026-07-17

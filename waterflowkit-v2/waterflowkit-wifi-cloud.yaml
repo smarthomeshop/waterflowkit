@@ -3,7 +3,7 @@
 
 substitutions:
   default_network: "WiFi + SmartHomeShop App (cloud)"
-  # SmartHomeShop setup portal
+  # SmartHomeShop setup portal package
   setup_product_name: "WaterFlowKit"
   setup_product_variant: "V2 WiFi + SmartHomeShop App"
   setup_support_cloud: "true"
