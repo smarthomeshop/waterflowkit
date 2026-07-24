@@ -1,6 +1,6 @@
 {
   "name": "WaterFlowKit V2 Ethernet",
-  "version": "2.13.0",
+  "version": "2.14.0",
   "home_assistant_domain": "esphome",
   "new_install_skip_erase": false,
   "builds": [
@@ -8,7 +8,7 @@
       "chipFamily": "ESP32-C6",
       "ota": {
         "path": "waterflowkit-v2-ethernet/waterflowkit-esp32c6.ota.bin",
-        "md5": "7aabec18cc92baf22107d8517db70b5c"
+        "md5": "6af5c4b81f65adfb8a3d04b72ec2398d"
       },
       "parts": [
         {
