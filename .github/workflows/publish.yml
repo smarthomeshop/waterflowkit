@@ -405,7 +405,7 @@ jobs:
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
-      files: waterflowkit-v2/waterflowkit-wifi.yaml
+      files: waterflowkit-v2/waterflowkit-wifi-factory-hardware-test.yaml
       name: WaterFlowKit V2 WiFi
       clean: false
       esphome_version: latest
@@ -419,7 +419,7 @@ jobs:
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
-      files: waterflowkit-v2/waterflowkit-wifi-cloud.yaml
+      files: waterflowkit-v2/waterflowkit-wifi-cloud-factory-hardware-test.yaml
       name: WaterFlowKit V2 WiFi + SmartHomeShop App (cloud)
       clean: false
       esphome_version: latest
@@ -433,7 +433,7 @@ jobs:
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
-      files: waterflowkit-v2/waterflowkit-ethernet.yaml
+      files: waterflowkit-v2/waterflowkit-ethernet-factory-hardware-test.yaml
       name: WaterFlowKit V2 Ethernet
       clean: false
       esphome_version: latest
@@ -447,7 +447,7 @@ jobs:
     if: needs.detect-changes.outputs.v2_build == 'true'
     uses: ./.github/workflows/esphome-build.yml
     with:
-      files: waterflowkit-v2/waterflowkit-ethernet-cloud.yaml
+      files: waterflowkit-v2/waterflowkit-ethernet-cloud-factory-hardware-test.yaml
       name: WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)
       clean: false
       esphome_version: latest

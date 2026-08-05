@@ -6,6 +6,8 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
+- Added automatic post-install hardware checks for WaterFlowKit V2, including firmware startup and the built-in temperature and humidity sensor.
+
 - Add customer-facing firmware notes here before merging a PR.
 
 ## [WaterFlowKit V1 1.13] - 2026-07-22

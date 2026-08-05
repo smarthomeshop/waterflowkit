@@ -1,0 +1,4 @@
+# WaterFlowKit V2 Ethernet image with post-flash on-board hardware checks.
+packages:
+  product: !include waterflowkit-ethernet.yaml
+  factory_hardware_test: !include packages/factory_hardware_test.yaml

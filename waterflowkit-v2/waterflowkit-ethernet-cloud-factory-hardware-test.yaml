@@ -1,0 +1,4 @@
+# WaterFlowKit V2 Ethernet cloud image with post-flash on-board hardware checks.
+packages:
+  product: !include waterflowkit-ethernet-cloud.yaml
+  factory_hardware_test: !include packages/factory_hardware_test.yaml
