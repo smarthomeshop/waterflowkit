@@ -6,23 +6,9 @@ This changelog starts on 2026-04-01. Earlier firmware versions existed before th
 
 ## [Unreleased]
 
-- Add customer-facing firmware notes here before merging a PR.
-
-## [WaterFlowKit V1 1.14] - 2026-10-17
-
-
 - Fix the cloud authorization header, which could get corrupted and made the kit fail syncs and register with the cloud again.
 - V1: count every water flow once in the cloud; finished flow events are no longer sent next to the pulse totals.
 - V1: report the actual firmware version to the cloud.
-
-
-## [WaterFlowKit V2 2.15.0] - 2026-10-17
-
-
-- Fix the cloud authorization header, which could get corrupted and made the kit fail syncs and register with the cloud again.
-- V1: count every water flow once in the cloud; finished flow events are no longer sent next to the pulse totals.
-- V1: report the actual firmware version to the cloud.
-
 
 ## [WaterFlowKit V2 2.14.0] - 2026-08-05
 
