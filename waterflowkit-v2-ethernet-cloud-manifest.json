@@ -1,6 +1,6 @@
 {
   "name": "WaterFlowKit V2 Ethernet + SmartHomeShop App (cloud)",
-  "version": "2.14.0",
+  "version": "2.15.0",
   "home_assistant_domain": "esphome",
   "new_install_skip_erase": false,
   "builds": [
@@ -8,7 +8,7 @@
       "chipFamily": "ESP32-C6",
       "ota": {
         "path": "waterflowkit-v2-ethernet-cloud/waterflowkit-esp32c6.ota.bin",
-        "md5": "77074b89a186b40715c08622367d601e"
+        "md5": "67bc4b23a11e8637a0a0bfaaaab390be"
       },
       "parts": [
         {
