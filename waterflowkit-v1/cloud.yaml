@@ -416,12 +416,12 @@ script:
           url: "${cloud_api_url}/api/${cloud_api_version}/devices/register"
           request_headers:
             Content-Type: "application/json"
-            User-Agent: "WaterFlowKit/${project_version}"
+            User-Agent: "WaterFlowKit/${software_version}"
             Accept: "application/json"
           json: |-
             root["mac_address"] = id(wifi_mac_address).state;
             root["hardware_version"] = "${hardware_version}";
-            root["firmware_version"] = "${project_version}";
+            root["firmware_version"] = "${software_version}";
             root["product"] = "waterflowkit";
             if (id(wifi_ip_address).has_state()) {
               root["local_ip"] = id(wifi_ip_address).state;
@@ -745,8 +745,11 @@ script:
           request_headers:
             Content-Type: "application/json"
             Authorization: !lambda |-
-              return ("Bearer " + id(cloud_device_token)).c_str();
-            User-Agent: "WaterFlowKit/${project_version}"
+              static std::string auth;
+              auth = "Bearer ";
+              auth += id(cloud_device_token);
+              return auth.c_str();
+            User-Agent: "WaterFlowKit/${software_version}"
             Accept: "application/json"
           capture_response: true
           max_response_buffer_size: 256
@@ -760,7 +763,6 @@ script:
             root["has_flow"] = id(pending_flow_data);
             root["has_totals"] = id(pending_totals_data);
             root["has_environment"] = id(pending_environment_data);
-            root["has_events"] = id(water_changed);
 
             // === RAW FLOW DATA (pulses per minute, averaged over 60s) ===
             // App converts to L/min using: L/min = ppm / pulses_per_liter / 60
@@ -769,29 +771,9 @@ script:
               root["flow2_ppm"] = id(avg_flow2_ppm);
             }
 
-            // === RAW WATER EVENTS (pulse counts for individual flow events) ===
-            // App converts pulses to liters using selected sensor type
-            if (id(water_changed)) {
-              JsonArray events = root["events"].to<JsonArray>();
-
-              // Flow 1 event - RAW pulses
-              if (id(flow1_event_pulses) > 0) {
-                JsonObject ev1 = events.add<JsonObject>();
-                ev1["sensor"] = 1;
-                ev1["pulses"] = id(flow1_event_pulses);
-                ev1["started_at"] = id(flow1_started_at);
-                ev1["duration_sec"] = id(sntp_time).now().timestamp - id(flow1_started_at);
-              }
-
-              // Flow 2 event - RAW pulses
-              if (id(flow2_event_pulses) > 0) {
-                JsonObject ev2 = events.add<JsonObject>();
-                ev2["sensor"] = 2;
-                ev2["pulses"] = id(flow2_event_pulses);
-                ev2["started_at"] = id(flow2_started_at);
-                ev2["duration_sec"] = id(sntp_time).now().timestamp - id(flow2_started_at);
-              }
-            }
+            // Flow events are not sent (same as V2): the pulse totals below
+            // already contain this water, and the cloud adds event pulses on
+            // top of those totals, which counted every flow event twice.
 
             // === RAW TOTALS DATA (cumulative pulse counts) ===
             // App converts to liters using: liters = pulses / pulses_per_liter
@@ -829,7 +811,7 @@ script:
             }
 
             // === DEVICE INFO ===
-            root["firmware_version"] = "${project_version}";
+            root["firmware_version"] = "${software_version}";
             root["hardware_version"] = "${hardware_version}";
 
           on_response:
